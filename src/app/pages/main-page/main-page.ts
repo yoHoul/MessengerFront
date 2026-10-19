@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { ChatMenu } from '../../core/components/chat-menu/chat-menu';
@@ -18,4 +18,14 @@ export class MainPage {
   protected readonly chats = toSignal(this.chatsApi.getChats(), {
     initialValue: [],
   });
+
+  protected readonly selectedChatId = signal<string | null>(null);
+
+  protected readonly selectedChat = computed(
+    () => this.chats().find((chat) => chat.id === this.selectedChatId()) ?? null,
+  );
+
+  protected selectChat(chatId: string): void {
+    this.selectedChatId.set(chatId);
+  }
 }

@@ -1,26 +1,22 @@
 [
-  {
-    "id": "1",
-    "title": "Аня Соколова",
-    "lastMessage": "Скинула макеты, глянь, пожалуйста",
-    "unreadCount": 2
-  },
-  {
-    "id": "2",
-    "title": "Фронтенд-команда",
-    "lastMessage": "Созвон в 19:00",
-    "unreadCount": 0
-  },
-  {
-    "id": "3",
-    "title": "Максим Иванов",
-    "lastMessage": "Ок, беру на себя",
-    "unreadCount": 0
-  },
-  {
-    "id": "4",
-    "title": "Дизайн-ревью",
-    "lastMessage": "Анна: добавила комментарии в фигму",
-    "unreadCount": 5
-  }
+  { "id": "1", "type": "direct", "title": null, "lastMessage": "Скинула макеты, глянь, пожалуйста", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "2", "type": "group", "title": "Фронтенд-команда", "lastMessage": "Созвон в 19:00", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "3", "type": "direct", "title": null, "lastMessage": "Ок, беру на себя", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "4", "type": "group", "title": "Дизайн-ревью", "lastMessage": "Анна: добавила комментарии в фигму", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "5", "type": "direct", "title": null, "lastMessage": "Спасибо за ревью!", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "6", "type": "group", "title": "Проект «Мессенджер»", "lastMessage": "Илья: обновил API-контракт", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "7", "type": "direct", "title": null, "lastMessage": "Договорились", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "8", "type": "group", "title": "Отдел поддержки", "lastMessage": "Смена принята, всё тихо", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "9", "type": "direct", "title": null, "lastMessage": "Скинь ссылку на задачу", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "10", "type": "direct", "title": null, "lastMessage": "Завтра в 10:00", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "11", "type": "direct", "title": null, "lastMessage": "Готово, проверь", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "12", "type": "direct", "title": null, "lastMessage": "Привет! Есть минутка?", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "13", "type": "direct", "title": null, "lastMessage": "Отправил счёт на почту", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "14", "type": "direct", "title": null, "lastMessage": "Спасибо, всё получила", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "15", "type": "direct", "title": null, "lastMessage": "Позвоню после обеда", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "16", "type": "direct", "title": null, "lastMessage": "Файлы в облаке", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "17", "type": "direct", "title": null, "lastMessage": "Нужен твой апрув", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "18", "type": "direct", "title": null, "lastMessage": "Обновила статусы", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "19", "type": "direct", "title": null, "lastMessage": "Вернусь к вечеру", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "20", "type": "group", "title": "Тестировщики", "lastMessage": "Сборка 1.2.0 готова", "createdAt": "2026-09-01T10:00:00+06:00" }
 ]

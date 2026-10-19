@@ -3,9 +3,12 @@
         <div class="menu-header">
             <app-search-chat></app-search-chat>
         </div>
-        <app-chat-menu [chats]="chats()"></app-chat-menu>
+        <app-chat-menu
+            [chats]="chats()"
+            (selectedChatId)="selectChat($event)"
+        ></app-chat-menu>
     </div>
     <div class="chat-window">
-        <app-chat-window></app-chat-window>
+        <app-chat-window [chat]="selectedChat()"></app-chat-window>
     </div>
 </div>

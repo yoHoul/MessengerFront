@@ -2,7 +2,10 @@
     <p-listbox
         [options]="chats()"
         optionLabel="title"
+        optionValue="id"
         dataKey="id"
+        (onChange)="onSelectionChange($event)"
+        scrollHeight="100%"
         fluid
         class="chat-list"
         style="border: none;"
@@ -15,7 +18,11 @@
                 </div>
 
                 @if (chat.unreadCount > 0) {
-                    <span class="chat-item__unread">{{ chat.unreadCount }}</span>
+                    <p-badge
+                        [value]="chat.unreadCount"
+                        size="small"
+                        style="flex: 0 0 auto; margin-left: auto; color: #ffffff;"
+                    ></p-badge>
                 }
             </div>
         </ng-template>

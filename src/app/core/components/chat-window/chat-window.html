@@ -1,6 +1,10 @@
 <div class="container">
     <div class="header">
-        i am header
+        @if (chat(); as currentChat) {
+            {{ currentChat.title }}
+        } @else {
+            Выберите чат
+        }
     </div>
     <div class="chat">
         i am chat

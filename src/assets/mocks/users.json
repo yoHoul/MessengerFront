@@ -1,0 +1,18 @@
+[
+  { "id": "1", "username": "me", "displayName": "Пользователь 1", "avatarUrl": null },
+  { "id": "2", "username": "anya_sokolova", "displayName": "Аня Соколова", "avatarUrl": null },
+  { "id": "3", "username": "maksim_ivanov", "displayName": "Максим Иванов", "avatarUrl": null },
+  { "id": "4", "username": "kirill_morozov", "displayName": "Кирилл Морозов", "avatarUrl": null },
+  { "id": "5", "username": "olga_belova", "displayName": "Ольга Белова", "avatarUrl": null },
+  { "id": "6", "username": "ivan_dorofeev", "displayName": "Иван Дорофеев", "avatarUrl": null },
+  { "id": "7", "username": "svetlana_orlova", "displayName": "Светлана Орлова", "avatarUrl": null },
+  { "id": "8", "username": "artem_volkov", "displayName": "Артём Волков", "avatarUrl": null },
+  { "id": "9", "username": "anna_koroleva", "displayName": "Анна Королёва", "avatarUrl": null },
+  { "id": "10", "username": "andrey_petrov", "displayName": "Андрей Петров", "avatarUrl": null },
+  { "id": "11", "username": "maria_lebedeva", "displayName": "Мария Лебедева", "avatarUrl": null },
+  { "id": "12", "username": "dmitry_kozlov", "displayName": "Дмитрий Козлов", "avatarUrl": null },
+  { "id": "13", "username": "ekaterina_novikova", "displayName": "Екатерина Новикова", "avatarUrl": null },
+  { "id": "14", "username": "sergey_fedorov", "displayName": "Сергей Фёдоров", "avatarUrl": null },
+  { "id": "15", "username": "natalia_morozova", "displayName": "Наталья Морозова", "avatarUrl": null },
+  { "id": "16", "username": "pavel_sokolov", "displayName": "Павел Соколов", "avatarUrl": null }
+]

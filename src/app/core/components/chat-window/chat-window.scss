@@ -1,9 +1,8 @@
-.container {
-
-}
-
 .header {
+    display: flex;
+    align-items: center;
     box-sizing: border-box;
     height: 50px;
+    padding: 0 16px;
     border-bottom: var(--border-size) solid var(--border-color);
 }

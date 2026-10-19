@@ -1,19 +1,19 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, switchMap } from 'rxjs';
 
-export interface Chat {
-  id: string;
-  title: string;
-  lastMessage: string;
-  unreadCount: number;
-}
+import { ChatListItem } from '../type/chat-list-item';
+import { User } from '../type/user';
 
 @Injectable({ providedIn: 'root' })
 export class ChatsApiService {
   private readonly http = inject(HttpClient);
 
-  getChats(): Observable<Chat[]> {
-    return this.http.get<Chat[]>('assets/mocks/chats.json');
+  getChats(): Observable<ChatListItem[]> {
+    return this.http.get<User>('assets/mocks/user.json').pipe(
+      switchMap((user) =>
+        this.http.get<ChatListItem[]>(`assets/mocks/chat-list/${user.id}.json`),
+      ),
+    );
   }
 }

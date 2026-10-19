@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, input } from '@angular/core';
+
+import { ChatListItem } from '../../type/chat-list-item';
 
 @Component({
   imports: [],
@@ -6,4 +8,6 @@ import { Component } from '@angular/core';
   styleUrl: './chat-window.scss',
   templateUrl: './chat-window.html',
 })
-export class ChatWindow {}
+export class ChatWindow {
+  readonly chat = input<ChatListItem | null>(null);
+}
