@@ -1,10 +1,11 @@
 <div class="container">
     <div class="chat-menu">
-        <div class="menu-header">menu header</div>
-        <p>menu</p>
+        <div class="menu-header">
+            <app-search-chat></app-search-chat>
+        </div>
+        <app-chat-menu [chats]="chats()"></app-chat-menu>
     </div>
     <div class="chat-window">
-        <div class="window-header">window chat header</div>
-        <p>window chat</p>
+        <app-chat-window></app-chat-window>
     </div>
 </div>

@@ -1,1 +1,23 @@
-<p>chat-menu works!</p>
+<div class="container">
+    <p-listbox
+        [options]="chats()"
+        optionLabel="title"
+        dataKey="id"
+        fluid
+        class="chat-list"
+        style="border: none;"
+    >
+        <ng-template let-chat pTemplate="item">
+            <div class="chat-item">
+                <div class="chat-item__text">
+                    <span class="chat-item__title">{{ chat.title }}</span>
+                    <span class="chat-item__message">{{ chat.lastMessage }}</span>
+                </div>
+
+                @if (chat.unreadCount > 0) {
+                    <span class="chat-item__unread">{{ chat.unreadCount }}</span>
+                }
+            </div>
+        </ng-template>
+    </p-listbox>
+</div>

@@ -10,6 +10,7 @@
 }
 
 .chat-menu {
+    box-sizing: border-box;
     border-right: var(--border-size) solid var(--border-color);
     width: 30%;
 }
@@ -19,8 +20,8 @@
 
 }
 
-.window-header,
 .menu-header {
+    box-sizing: border-box;
     height: 50px;
     border-bottom: var(--border-size) solid var(--border-color);
 }
