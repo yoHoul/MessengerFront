@@ -32,7 +32,39 @@
 }
 
 .menu-header {
+    display: flex;
     flex: 0 0 50px;
+    gap: 8px;
+    align-items: center;
     box-sizing: border-box;
+    padding: 0 8px;
     border-bottom: var(--border-size) solid var(--border-color);
+}
+
+app-search-chat {
+    flex: 1;
+    min-width: 0;
+}
+
+.menu-button {
+    display: grid;
+    flex: 0 0 32px;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+.menu-button:hover {
+    opacity: 0.7;
+}
+
+.menu-button svg {
+    width: 20px;
+    height: 20px;
 }

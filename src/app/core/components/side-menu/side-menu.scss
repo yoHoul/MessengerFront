@@ -1,0 +1,56 @@
+:host {
+    display: contents;
+}
+
+:host ::ng-deep .p-drawer-content {
+    padding: 0;
+}
+
+:host ::ng-deep .p-drawer-header {
+    height: 0;
+    padding: 0;
+}
+
+.side-menu__content {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: 8px 0 16px;
+}
+
+.profile {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 12px 12px;
+}
+
+.profile__info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.profile__name {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profile__username {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.divider {
+    margin: 8px 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.theme-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+}

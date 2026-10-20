@@ -30,6 +30,11 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(),
     provideRouter(routes),
-    provideOptimus({ theme: { preset: AppPreset } }),
+    provideOptimus({
+      theme: {
+        preset: AppPreset,
+        options: { darkModeSelector: '.p-dark' },
+      },
+    }),
   ],
 };

@@ -1,17 +1,19 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { BarsIcon } from '@openng/optimus-ui/icons/bars';
 
 import { ChatMenu } from '../../core/components/chat-menu/chat-menu';
 import { ChatSearchResults } from '../../core/components/chat-search-results/chat-search-results';
 import { ChatWindow } from '../../core/components/chat-window/chat-window';
 import { SearchChat } from '../../core/components/search-chat/search-chat';
+import { SideMenu } from '../../core/components/side-menu/side-menu';
 import { ChatsApiService } from '../../core/services/chats-api.service';
 import { ChatListItem } from '../../core/type/chat-list-item';
 import { Message } from '../../core/type/message';
 import { User } from '../../core/type/user';
 
 @Component({
-  imports: [ChatMenu, ChatSearchResults, ChatWindow, SearchChat],
+  imports: [BarsIcon, ChatMenu, ChatSearchResults, ChatWindow, SearchChat, SideMenu],
   selector: 'app-main-page',
   styleUrl: './main-page.scss',
   templateUrl: './main-page.html',
@@ -22,6 +24,7 @@ export class MainPage {
   private readonly chatsState = signal<ChatListItem[]>([]);
 
   protected readonly chats = this.chatsState.asReadonly();
+  protected readonly isMenuOpen = signal(false);
   protected readonly query = signal('');
   protected readonly selectedChatId = signal<string | null>(null);
 
@@ -38,6 +41,14 @@ export class MainPage {
       .getChats()
       .pipe(takeUntilDestroyed())
       .subscribe((chats) => this.chatsState.set(chats));
+  }
+
+  protected openMenu(): void {
+    this.isMenuOpen.set(true);
+  }
+
+  protected setMenuOpen(open: boolean): void {
+    this.isMenuOpen.set(open);
   }
 
   protected setQuery(query: string): void {

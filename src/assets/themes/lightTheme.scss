@@ -3,9 +3,15 @@
     // стили контейнеров
     --bg-main: #ffffff;
 
-    --border-color: #5d5d5d;
+    --border-color: #d0d0d0;
     --border-size: 2px;
 
     // стили текста
     --text-main: #000000;
+
+    // стили сообщений
+    --bubble-incoming: #f1f1f1;
+    --bubble-incoming-text: #111111;
+    --bubble-outgoing: var(--p-primary-color, #3b82f6);
+    --bubble-outgoing-text: #ffffff;
 }

@@ -48,13 +48,13 @@
     max-width: 70%;
     padding: 8px 12px;
     border-radius: 12px;
-    background-color: var(--p-surface-800, #1f1f1f);
-    color: var(--p-surface-0, #ffffff);
+    background-color: var(--bubble-incoming, #1f1f1f);
+    color: var(--bubble-incoming-text, #ffffff);
 }
 
 .message--mine .bubble {
-    background-color: var(--p-primary-color, #3b82f6);
-    color: var(--p-primary-contrast-color, #ffffff);
+    background-color: var(--bubble-outgoing, #3b82f6);
+    color: var(--bubble-outgoing-text, #ffffff);
 }
 
 .text {

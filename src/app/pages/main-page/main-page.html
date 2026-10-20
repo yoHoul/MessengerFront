@@ -1,6 +1,15 @@
 <div class="container">
     <div class="chat-menu">
         <div class="menu-header">
+            <button
+                type="button"
+                class="menu-button"
+                aria-label="Открыть меню"
+                (click)="openMenu()"
+            >
+                <svg data-p-icon="bars" aria-hidden="true"></svg>
+            </button>
+
             <app-search-chat
                 [query]="query()"
                 (queryChange)="setQuery($event)"
@@ -30,4 +39,9 @@
             (messageSent)="onMessageSent($event)"
         ></app-chat-window>
     </div>
+
+    <app-side-menu
+        [visible]="isMenuOpen()"
+        (visibleChange)="setMenuOpen($event)"
+    ></app-side-menu>
 </div>
