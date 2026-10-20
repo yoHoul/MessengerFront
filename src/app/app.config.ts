@@ -1,11 +1,18 @@
-import { provideHttpClient } from '@angular/common/http';
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  ApplicationConfig,
+  inject,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideOptimus } from '@openng/optimus-ui/config';
 import { definePreset } from '@openng/optimus-ui-themes';
 import Aura from '@openng/optimus-ui-themes/aura';
 
 import { routes } from './app.routes';
+import { authMockInterceptor } from './core/interceptors/auth-mock.interceptor';
+import { AuthService } from './core/services/auth.service';
 
 const AppPreset = definePreset(Aura, {
   semantic: {
@@ -28,7 +35,8 @@ const AppPreset = definePreset(Aura, {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(),
+    provideAppInitializer(() => inject(AuthService).restoreSession()),
+    provideHttpClient(withInterceptors([authMockInterceptor])),
     provideRouter(routes),
     provideOptimus({
       theme: {
