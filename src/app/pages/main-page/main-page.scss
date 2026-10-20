@@ -24,6 +24,13 @@
     width: 70%;
 }
 
+.menu-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
 .menu-header {
     flex: 0 0 50px;
     box-sizing: border-box;

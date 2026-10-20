@@ -3,4 +3,5 @@ export interface ChatListItem {
   title: string;
   lastMessage: string;
   unreadCount: number;
+  peerUserId: string | null;
 }

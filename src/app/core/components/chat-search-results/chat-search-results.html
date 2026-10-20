@@ -1,0 +1,29 @@
+@if (groups().length === 0) {
+    <p class="state">{{ isUsersLoading() ? 'Ищем…' : 'Ничего не найдено' }}</p>
+} @else {
+    <p-listbox
+        [options]="groups()"
+        [group]="true"
+        optionGroupLabel="label"
+        optionGroupChildren="items"
+        scrollHeight="100%"
+        fluid
+        class="search-results"
+        style="border: none;"
+        (onClick)="onResultClick($event)"
+    >
+        <ng-template let-item pTemplate="item">
+            @if (item.kind === 'chat') {
+                <div class="result">
+                    <span class="result__title">{{ item.chat.title }}</span>
+                    <span class="result__subtitle">{{ item.chat.lastMessage }}</span>
+                </div>
+            } @else {
+                <div class="result">
+                    <span class="result__title">{{ item.user.displayName }}</span>
+                    <span class="result__subtitle">&#64;{{ item.user.username }}</span>
+                </div>
+            }
+        </ng-template>
+    </p-listbox>
+}

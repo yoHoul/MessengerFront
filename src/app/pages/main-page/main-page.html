@@ -1,14 +1,33 @@
 <div class="container">
     <div class="chat-menu">
         <div class="menu-header">
-            <app-search-chat></app-search-chat>
+            <app-search-chat
+                [query]="query()"
+                (queryChange)="setQuery($event)"
+            ></app-search-chat>
         </div>
-        <app-chat-menu
-            [chats]="chats()"
-            (selectedChatId)="selectChat($event)"
-        ></app-chat-menu>
+
+        <div class="menu-content">
+            @if (isSearching()) {
+                <app-chat-search-results
+                    [chats]="chats()"
+                    [query]="query()"
+                    (chatSelected)="onSearchChatSelected($event)"
+                    (userSelected)="onSearchUserSelected($event)"
+                ></app-chat-search-results>
+            } @else {
+                <app-chat-menu
+                    [chats]="chats()"
+                    (selectedChatId)="selectChat($event)"
+                ></app-chat-menu>
+            }
+        </div>
     </div>
+
     <div class="chat-window">
-        <app-chat-window [chat]="selectedChat()"></app-chat-window>
+        <app-chat-window
+            [chat]="selectedChat()"
+            (messageSent)="onMessageSent($event)"
+        ></app-chat-window>
     </div>
 </div>

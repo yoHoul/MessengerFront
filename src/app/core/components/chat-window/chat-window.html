@@ -1,12 +1,43 @@
 <div class="container">
-    <div class="header">
-        @if (chat(); as currentChat) {
-            {{ currentChat.title }}
-        } @else {
-            Выберите чат
-        }
-    </div>
-    <div class="chat">
-        i am chat
-    </div>
+    @if (chat(); as currentChat) {
+        <div class="header">
+            <p-avatar [label]="initials()" shape="circle"></p-avatar>
+            <span class="title">{{ currentChat.title }}</span>
+        </div>
+
+        <div class="messages" #messagesContainer>
+            @if (messages().length === 0) {
+                <p class="empty">Сообщений пока нет</p>
+            } @else {
+                @for (message of messages(); track message.id) {
+                    <div class="message" [class.message--mine]="isMine(message)">
+                        <div class="bubble">
+                            <p class="text">{{ message.text }}</p>
+                            <span class="time">{{ message.createdAt | date: 'HH:mm' }}</span>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="composer">
+            <input
+                pInputText
+                fluid
+                type="text"
+                placeholder="Сообщение"
+                [value]="draft()"
+                (input)="onDraftInput($event)"
+                (keydown.enter)="send()"
+            />
+            <p-button
+                label="Отправить"
+                size="small"
+                [disabled]="!draft().trim()"
+                (onClick)="send()"
+            ></p-button>
+        </div>
+    } @else {
+        <div class="empty-state">Выберите чат</div>
+    }
 </div>
