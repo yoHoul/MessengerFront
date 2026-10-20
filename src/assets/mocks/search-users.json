@@ -1,0 +1,12 @@
+[
+  { "id": "101", "username": "ivan_petrov", "displayName": "Иван Петров", "avatarUrl": null },
+  { "id": "102", "username": "anna_smirnova", "displayName": "Анна Смирнова", "avatarUrl": null },
+  { "id": "103", "username": "pavel_kuznetsov", "displayName": "Павел Кузнецов", "avatarUrl": null },
+  { "id": "104", "username": "elena_vasilieva", "displayName": "Елена Васильева", "avatarUrl": null },
+  { "id": "105", "username": "roman_gusev", "displayName": "Роман Гусев", "avatarUrl": null },
+  { "id": "106", "username": "darya_popova", "displayName": "Дарья Попова", "avatarUrl": null },
+  { "id": "107", "username": "nikita_soloviev", "displayName": "Никита Соловьёв", "avatarUrl": null },
+  { "id": "108", "username": "yulia_zaytseva", "displayName": "Юлия Зайцева", "avatarUrl": null },
+  { "id": "109", "username": "timur_khabirov", "displayName": "Тимур Хабиров", "avatarUrl": null },
+  { "id": "110", "username": "viktoria_pavlova", "displayName": "Виктория Павлова", "avatarUrl": null }
+]

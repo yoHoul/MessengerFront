@@ -1,0 +1,30 @@
+<div class="container">
+    <p-listbox
+        [options]="chats()"
+        optionLabel="title"
+        optionValue="id"
+        dataKey="id"
+        (onChange)="onSelectionChange($event)"
+        scrollHeight="100%"
+        fluid
+        class="chat-list"
+        style="border: none;"
+    >
+        <ng-template let-chat pTemplate="item">
+            <div class="chat-item">
+                <div class="chat-item__text">
+                    <span class="chat-item__title">{{ chat.title }}</span>
+                    <span class="chat-item__message">{{ chat.lastMessage }}</span>
+                </div>
+
+                @if (chat.unreadCount > 0) {
+                    <p-badge
+                        [value]="chat.unreadCount"
+                        size="small"
+                        style="flex: 0 0 auto; margin-left: auto; color: #ffffff;"
+                    ></p-badge>
+                }
+            </div>
+        </ng-template>
+    </p-listbox>
+</div>

@@ -1,4 +1,4 @@
-:root {
+:root.p-dark {
     color-scheme: dark;
     // стили контейнеров
     --bg-main: #000000;
@@ -8,4 +8,10 @@
 
     // стили текста
     --text-main: #ffffff;
+
+    // стили сообщений
+    --bubble-incoming: #1f1f1f;
+    --bubble-incoming-text: #ffffff;
+    --bubble-outgoing: var(--p-primary-color, #3b82f6);
+    --bubble-outgoing-text: #ffffff;
 }

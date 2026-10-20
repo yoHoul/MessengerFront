@@ -1,0 +1,20 @@
+<div class="container">
+    <p-iconfield iconPosition="left" class="search-field">
+        <p-inputicon>
+            <svg data-p-icon="search" aria-hidden="true"></svg>
+        </p-inputicon>
+
+        <input
+            pInputText
+            fluid
+            type="text"
+            class="search-input"
+            placeholder="Поиск"
+            autocomplete="off"
+            aria-label="Поиск"
+            [value]="query()"
+            (input)="onInput($event)"
+            (keydown.escape)="clear()"
+        />
+    </p-iconfield>
+</div>

@@ -1,5 +1,7 @@
+@use './assets/themes/lightTheme';
 @use './assets/themes/darkTheme';
 @use './assets/fonts/fonts.scss';
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
 
 html, body {
     margin: 0;
@@ -8,6 +10,12 @@ html, body {
     min-height: 0;
     width: 100%;
     height: 100%;
+    font-family: "Roboto", sans-serif;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
 }
 
 p {

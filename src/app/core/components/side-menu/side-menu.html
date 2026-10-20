@@ -1,0 +1,48 @@
+<p-drawer
+    [visible]="visible()"
+    (visibleChange)="visibleChange.emit($event)"
+    position="left"
+    [modal]="true"
+    [dismissible]="true"
+    [closable]="false"
+    class="side-menu"
+    [style]="{ width: '320px' }"
+>
+    <div class="side-menu__content">
+        @if (user(); as currentUser) {
+            <div class="profile">
+                <p-avatar [label]="initials()" shape="circle" size="large"></p-avatar>
+                <div class="profile__info">
+                    <span class="profile__name">{{ currentUser.displayName }}</span>
+                    <span class="profile__username">&#64;{{ currentUser.username }}</span>
+                </div>
+            </div>
+        }
+
+        <p-button
+            label="Мой профиль"
+            [text]="true"
+            fluid
+            (onClick)="profileRequested.emit()"
+        ></p-button>
+
+        <p-button
+            label="Выйти из аккаунта"
+            severity="danger"
+            [text]="true"
+            fluid
+            (onClick)="logoutRequested.emit()"
+        ></p-button>
+
+        <div class="divider"></div>
+
+        <div class="theme-row">
+            <span>Ночная тема</span>
+            <p-toggleswitch
+                [ngModel]="theme.isDark()"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="theme.set($event)"
+            ></p-toggleswitch>
+        </div>
+    </div>
+</p-drawer>
