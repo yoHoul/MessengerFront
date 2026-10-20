@@ -20,10 +20,10 @@
         }
 
         <p-button
-            label="Мой профиль"
+            label="Настройки аккаунта"
             [text]="true"
             fluid
-            (onClick)="profileRequested.emit()"
+            (onClick)="openProfile()"
         ></p-button>
 
         <p-button
@@ -31,7 +31,7 @@
             severity="danger"
             [text]="true"
             fluid
-            (onClick)="logoutRequested.emit()"
+            (onClick)="openLogout()"
         ></p-button>
 
         <div class="divider"></div>
@@ -46,3 +46,134 @@
         </div>
     </div>
 </p-drawer>
+
+<p-dialog
+    [visible]="isProfileOpen()"
+    (visibleChange)="isProfileOpen.set($event)"
+    header="Настройки аккаунта"
+    styleClass="account-dialog"
+    [draggable]="false"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <div class="profile-form">
+        <label class="field">
+            <span>Имя</span>
+            <input
+                pInputText
+                fluid
+                type="text"
+                [value]="profileName()"
+                (input)="onProfileNameInput($event)"
+            />
+        </label>
+
+        <label class="field">
+            <span>Username</span>
+            <input
+                pInputText
+                fluid
+                type="text"
+                autocomplete="username"
+                [value]="profileUsername()"
+                (input)="onProfileUsernameInput($event)"
+            />
+        </label>
+
+        @if (profileError()) {
+            <p class="error">{{ profileError() }}</p>
+        }
+
+        @if (profileSuccess()) {
+            <p class="success">{{ profileSuccess() }}</p>
+        }
+
+        <div class="dialog-actions">
+            <p-button
+                label="Сохранить"
+                [disabled]="!canSaveProfile() || isProfileSaving()"
+                (onClick)="saveProfile()"
+            ></p-button>
+        </div>
+
+        <div class="divider"></div>
+
+        <h3 class="section-title">Смена пароля</h3>
+
+        <label class="field">
+            <span>Старый пароль</span>
+            <input
+                pInputText
+                fluid
+                type="password"
+                autocomplete="current-password"
+                [value]="oldPassword()"
+                (input)="onOldPasswordInput($event)"
+            />
+        </label>
+
+        <label class="field">
+            <span>Новый пароль</span>
+            <input
+                pInputText
+                fluid
+                type="password"
+                autocomplete="new-password"
+                [value]="newPassword()"
+                (input)="onNewPasswordInput($event)"
+            />
+        </label>
+
+        <label class="field">
+            <span>Подтвердите новый пароль</span>
+            <input
+                pInputText
+                fluid
+                type="password"
+                autocomplete="new-password"
+                [value]="confirmPassword()"
+                (input)="onConfirmPasswordInput($event)"
+            />
+        </label>
+
+        @if (passwordError()) {
+            <p class="error">{{ passwordError() }}</p>
+        }
+
+        @if (passwordSuccess()) {
+            <p class="success">{{ passwordSuccess() }}</p>
+        }
+
+        <div class="dialog-actions">
+            <p-button
+                label="Сменить пароль"
+                [disabled]="!canChangePassword() || isPasswordSaving()"
+                (onClick)="changePassword()"
+            ></p-button>
+        </div>
+    </div>
+</p-dialog>
+
+<p-dialog
+    [visible]="isLogoutOpen()"
+    (visibleChange)="isLogoutOpen.set($event)"
+    header="Выйти из аккаунта?"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <p class="logout-text">Вы уверены, что хотите выйти из аккаунта?</p>
+
+    <div class="dialog-actions">
+        <p-button
+            label="Отмена"
+            [text]="true"
+            (onClick)="isLogoutOpen.set(false)"
+        ></p-button>
+        <p-button
+            label="Выйти"
+            severity="danger"
+            (onClick)="confirmLogout()"
+        ></p-button>
+    </div>
+</p-dialog>
+

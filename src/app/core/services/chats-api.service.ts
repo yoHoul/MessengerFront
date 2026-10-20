@@ -1,6 +1,6 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, switchMap } from 'rxjs';
+import { Observable, catchError, of, throwError } from 'rxjs';
 
 import { ChatListItem } from '../type/chat-list-item';
 import { CurrentUserService } from './current-user.service';
@@ -11,10 +11,18 @@ export class ChatsApiService {
   private readonly currentUser = inject(CurrentUserService);
 
   getChats(): Observable<ChatListItem[]> {
-    return this.currentUser.getCurrentUser().pipe(
-      switchMap((user) =>
-        this.http.get<ChatListItem[]>(`assets/mocks/chat-list/${user.id}.json`),
-      ),
-    );
+    const userId = this.currentUser.currentUserId();
+
+    if (!userId) {
+      return of([]);
+    }
+
+    return this.http
+      .get<ChatListItem[]>(`assets/mocks/chat-list/${userId}.json`)
+      .pipe(
+        catchError((error: HttpErrorResponse) =>
+          error.status === 404 ? of([]) : throwError(() => error),
+        ),
+      );
   }
 }

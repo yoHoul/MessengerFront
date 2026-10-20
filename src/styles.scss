@@ -22,3 +22,7 @@ p {
     margin: 0;
     padding: 0;
 }
+
+.account-dialog {
+    width: min(560px, calc(100vw - 32px));
+}

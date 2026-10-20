@@ -1,0 +1,65 @@
+<div class="login">
+    <form class="login__form" (submit)="submit($event)">
+        <h1 class="login__title">
+            {{ isRegistering() ? 'Регистрация' : 'Вход' }}
+        </h1>
+
+        <label class="field">
+            <span>Логин</span>
+            <input
+                pInputText
+                fluid
+                type="text"
+                autocomplete="username"
+                [value]="login()"
+                (input)="onLoginInput($event)"
+            />
+        </label>
+
+        <label class="field">
+            <span>Пароль</span>
+            <input
+                pInputText
+                fluid
+                type="password"
+                [autocomplete]="isRegistering() ? 'new-password' : 'current-password'"
+                [value]="password()"
+                (input)="onPasswordInput($event)"
+            />
+        </label>
+
+        @if (isRegistering()) {
+            <label class="field">
+                <span>Подтвердите пароль</span>
+                <input
+                    pInputText
+                    fluid
+                    type="password"
+                    autocomplete="new-password"
+                    [value]="confirmPassword()"
+                    (input)="onConfirmPasswordInput($event)"
+                />
+            </label>
+        }
+
+        @if (error()) {
+            <p class="error">{{ error() }}</p>
+        }
+
+        <p-button
+            type="submit"
+            [label]="isRegistering() ? 'Зарегистрироваться' : 'Войти'"
+            fluid
+            [disabled]="isSubmitting()"
+        ></p-button>
+
+        <p-button
+            type="button"
+            [label]="isRegistering() ? 'Назад ко входу' : 'Регистрация'"
+            severity="secondary"
+            fluid
+            [disabled]="isSubmitting()"
+            (onClick)="switchMode()"
+        ></p-button>
+    </form>
+</div>
