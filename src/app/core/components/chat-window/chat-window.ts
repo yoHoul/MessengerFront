@@ -14,7 +14,7 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { AvatarModule } from '@openng/optimus-ui/avatar';
 import { ButtonModule } from '@openng/optimus-ui/button';
 import { InputText } from '@openng/optimus-ui/inputtext';
-import { of, switchMap } from 'rxjs';
+import { of, catchError, switchMap } from 'rxjs';
 
 import { CurrentUserService } from '../../services/current-user.service';
 import { MessagesApiService } from '../../services/messages-api.service';
@@ -58,9 +58,17 @@ export class ChatWindow {
   constructor() {
     toObservable(this.chatId)
       .pipe(
-        switchMap((chatId) =>
-          chatId ? this.messagesApi.getMessages(chatId) : of<Message[]>([]),
-        ),
+        switchMap((chatId) => {
+          this.messages.set([]);
+
+          if (!chatId) {
+            return of<Message[]>([]);
+          }
+
+          return this.messagesApi
+            .getMessages(chatId)
+            .pipe(catchError(() => of<Message[]>([])));
+        }),
         takeUntilDestroyed(),
       )
       .subscribe((messages) => this.messages.set(messages));

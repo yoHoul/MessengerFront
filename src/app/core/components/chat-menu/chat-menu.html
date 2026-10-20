@@ -4,7 +4,9 @@
         optionLabel="title"
         optionValue="id"
         dataKey="id"
-        (onChange)="onSelectionChange($event)"
+        [ngModel]="selectedChatId()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onSelectionChange($event)"
         scrollHeight="100%"
         fluid
         class="chat-list"

@@ -27,7 +27,8 @@
             } @else {
                 <app-chat-menu
                     [chats]="chats()"
-                    (selectedChatId)="selectChat($event)"
+                    [selectedChatId]="selectedChatId()"
+                    (chatSelected)="selectChat($event)"
                 ></app-chat-menu>
             }
         </div>
