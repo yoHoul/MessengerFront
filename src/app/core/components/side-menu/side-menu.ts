@@ -67,11 +67,22 @@ export class SideMenu {
     );
   });
 
-  protected readonly canSaveProfile = computed(
-    () =>
-      this.profileName().trim().length > 0 &&
-      this.profileUsername().trim().length > 0,
-  );
+  protected readonly canSaveProfile = computed(() => {
+    const user = this.user();
+
+    if (!user) {
+      return false;
+    }
+
+    const displayName = this.profileName().trim();
+    const username = this.profileUsername().trim();
+
+    return (
+      displayName.length > 0 &&
+      username.length > 0 &&
+      (displayName !== user.displayName || username !== user.username)
+    );
+  });
 
   protected readonly canChangePassword = computed(
     () =>
@@ -105,7 +116,7 @@ export class SideMenu {
 
   protected saveProfile(): void {
     if (!this.canSaveProfile()) {
-      this.profileError.set('Заполните имя и username');
+      this.profileError.set('Заполните имя и тэг аккаунта');
       return;
     }
 
@@ -129,7 +140,7 @@ export class SideMenu {
           this.isProfileSaving.set(false);
           this.profileError.set(
             error.status === 409
-              ? 'Этот username уже занят'
+              ? 'Этот тэг уже занят'
               : 'Не удалось сохранить профиль',
           );
         },

@@ -1,23 +1,25 @@
 import { Component, input, output } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { BadgeModule } from '@openng/optimus-ui/badge';
 import { ListboxModule } from '@openng/optimus-ui/listbox';
-import type { ListboxChangeEvent } from '@openng/optimus-ui/types/listbox';
 
 import { ChatListItem } from '../../type/chat-list-item';
 
 @Component({
-  imports: [BadgeModule, ListboxModule],
+  imports: [BadgeModule, FormsModule, ListboxModule],
   selector: 'app-chat-menu',
   styleUrl: './chat-menu.scss',
   templateUrl: './chat-menu.html',
 })
 export class ChatMenu {
   readonly chats = input.required<ChatListItem[]>();
-  readonly selectedChatId = output<string>();
+  readonly selectedChatId = input<string | null>(null);
 
-  protected onSelectionChange(event: ListboxChangeEvent): void {
-    if (typeof event.value === 'string') {
-      this.selectedChatId.emit(event.value);
+  readonly chatSelected = output<string>();
+
+  protected onSelectionChange(value: string | null): void {
+    if (typeof value === 'string') {
+      this.chatSelected.emit(value);
     }
   }
 }
