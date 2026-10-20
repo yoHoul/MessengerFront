@@ -1,0 +1,45 @@
+# Netlify: сборка и публикация Angular-приложения.
+# Параметры повторяют угловые настройки проекта (angular.json):
+# builder @angular/build:application кладёт результат в dist/<project>/browser.
+
+[build]
+  command = "npm run build"
+  publish = "dist/MessengerFront/browser"
+
+[build.environment]
+  # Angular 22 поддерживает Node ^20.19, ^22.12 и ^24; фиксируем мажор 22.
+  NODE_VERSION = "22"
+
+# Клиентский роутинг: любой путь отдаёт index.html, а маршрут разбирает Angular.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Бандлы Angular хешированы (outputHashing: "all") — их можно кешировать навсегда.
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Файлы из public/ и src/assets/mocks хеша в имени не имеют, поэтому кеш короткий.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/favicon.ico"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# Точка входа должна перепроверяться, иначе деплой не подхватится у пользователей.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
