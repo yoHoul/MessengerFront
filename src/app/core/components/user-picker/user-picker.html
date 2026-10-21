@@ -1,0 +1,31 @@
+<div class="user-picker">
+    <input
+        pInputText
+        fluid
+        type="text"
+        placeholder="Поиск"
+        [value]="query()"
+        (input)="onQueryInput($event)"
+    />
+
+    <div class="user-picker__list">
+        @for (user of filteredUsers(); track user.id) {
+            <button
+                type="button"
+                class="user-picker__item"
+                [class.user-picker__item--selected]="isSelected(user.id)"
+                [attr.aria-pressed]="isSelected(user.id)"
+                (click)="toggle(user)"
+            >
+                <p-avatar [label]="initials(user)" shape="circle"></p-avatar>
+
+                <span class="user-picker__info">
+                    <span class="user-picker__name">{{ user.displayName }}</span>
+                    <span class="user-picker__tag">&#64;{{ user.username }}</span>
+                </span>
+            </button>
+        } @empty {
+            <p class="user-picker__empty">Никого не найдено</p>
+        }
+    </div>
+</div>

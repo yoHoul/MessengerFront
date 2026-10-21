@@ -14,18 +14,30 @@
     >
         <ng-template let-chat pTemplate="item">
             <div class="chat-item">
-                <div class="chat-item__text">
-                    <span class="chat-item__title">{{ chat.title }}</span>
-                    <span class="chat-item__message">{{ chat.lastMessage }}</span>
-                </div>
+                <p-avatar [label]="initials(chat)" shape="circle"></p-avatar>
 
-                @if (chat.unreadCount > 0) {
-                    <p-badge
-                        [value]="chat.unreadCount"
-                        size="small"
-                        style="flex: 0 0 auto; margin-left: auto; color: #ffffff;"
-                    ></p-badge>
-                }
+                <div class="chat-item__body">
+                    <div class="chat-item__top">
+                        <span class="chat-item__title">{{ chat.title }}</span>
+                        @if (chat.lastMessageAt) {
+                            <span class="chat-item__time">
+                                {{ chat.lastMessageAt | date: 'HH:mm' }}
+                            </span>
+                        }
+                    </div>
+
+                    <div class="chat-item__bottom">
+                        <span class="chat-item__message">{{ messagePreview(chat) }}</span>
+
+                        @if (chat.unreadCount > 0) {
+                            <p-badge
+                                [value]="chat.unreadCount"
+                                size="small"
+                                style="flex: 0 0 auto; margin-left: auto; color: #ffffff;"
+                            ></p-badge>
+                        }
+                    </div>
+                </div>
             </div>
         </ng-template>
     </p-listbox>

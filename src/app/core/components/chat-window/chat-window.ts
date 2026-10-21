@@ -23,8 +23,10 @@ import { GroupInfoApiService } from '../../services/group-info-api.service';
 import { MessagesApiService } from '../../services/messages-api.service';
 import { UserProfileApiService } from '../../services/user-profile-api.service';
 import { ChatListItem } from '../../type/chat-list-item';
+import { GroupRenameRequest } from '../../type/group-rename-request';
 import { Message } from '../../type/message';
 import { User } from '../../type/user';
+import { UserPicker } from '../user-picker/user-picker';
 
 @Component({
   imports: [
@@ -33,6 +35,7 @@ import { User } from '../../type/user';
     DatePipe,
     DialogModule,
     InputText,
+    UserPicker,
   ],
   selector: 'app-chat-window',
   styleUrl: './chat-window.scss',
@@ -51,6 +54,8 @@ export class ChatWindow {
   readonly chat = input<ChatListItem | null>(null);
   readonly messageSent = output<Message>();
   readonly directChatRequested = output<User>();
+  readonly groupRenamed = output<GroupRenameRequest>();
+  readonly groupDeleted = output<string>();
 
   protected readonly messages = signal<Message[]>([]);
   protected readonly draft = signal('');
@@ -61,6 +66,14 @@ export class ChatWindow {
   protected readonly isGroupLoading = signal(false);
   protected readonly groupMembers = signal<User[]>([]);
   protected readonly currentUserId = this.currentUser.currentUserId;
+  protected readonly isAddMembersOpen = signal(false);
+  protected readonly isAddMembersLoading = signal(false);
+  protected readonly addMemberCandidates = signal<User[]>([]);
+  protected readonly addSelectedIds = signal<string[]>([]);
+  protected readonly addMemberError = signal('');
+  protected readonly isGroupEditing = signal(false);
+  protected readonly groupTitleDraft = signal('');
+  protected readonly isDeleteGroupOpen = signal(false);
 
   protected readonly canOpenProfile = computed(
     () =>
@@ -71,6 +84,17 @@ export class ChatWindow {
   protected readonly isGroup = computed(
     () => this.chat()?.peerUserId === null,
   );
+
+  protected readonly isGroupOwner = computed(
+    () => this.chat()?.ownerId === this.currentUserId(),
+  );
+
+  protected readonly canRenameGroup = computed(() => {
+    const currentTitle = this.chat()?.title.trim() ?? '';
+    const draft = this.groupTitleDraft().trim();
+
+    return draft.length > 0 && draft !== currentTitle;
+  });
 
   protected readonly profileIsCurrentUser = computed(
     () => this.profile()?.id === this.currentUser.currentUserId(),
@@ -249,9 +273,135 @@ export class ChatWindow {
     this.groupMembers.set([]);
     this.isGroupLoading.set(true);
     this.isGroupOpen.set(true);
+    this.isGroupEditing.set(false);
+    this.groupTitleDraft.set('');
+    this.loadGroupMembers(chat.id);
+  }
+
+  protected startGroupRename(): void {
+    const chat = this.chat();
+
+    if (!chat || !this.isGroupOwner()) {
+      return;
+    }
+
+    this.groupTitleDraft.set(chat.title);
+    this.isGroupEditing.set(true);
+  }
+
+  protected cancelGroupRename(): void {
+    this.isGroupEditing.set(false);
+    this.groupTitleDraft.set('');
+  }
+
+  protected onGroupTitleInput(event: Event): void {
+    this.groupTitleDraft.set((event.target as HTMLInputElement).value);
+  }
+
+  protected renameGroup(): void {
+    const chat = this.chat();
+    const title = this.groupTitleDraft().trim();
+
+    if (!chat || !this.isGroupOwner() || !this.canRenameGroup()) {
+      return;
+    }
+
+    this.groupRenamed.emit({ chatId: chat.id, title });
+    this.isGroupEditing.set(false);
+    this.groupTitleDraft.set('');
+  }
+
+  protected openDeleteGroup(): void {
+    if (!this.isGroupOwner()) {
+      return;
+    }
+
+    this.isDeleteGroupOpen.set(true);
+  }
+
+  protected confirmDeleteGroup(): void {
+    const chat = this.chat();
+
+    if (!chat || !this.isGroupOwner()) {
+      return;
+    }
+
+    this.groupInfoApi.deleteGroup(chat.id).subscribe(() => {
+      this.isDeleteGroupOpen.set(false);
+      this.isGroupOpen.set(false);
+      this.groupDeleted.emit(chat.id);
+    });
+  }
+
+  protected openAddMembers(): void {
+    const chat = this.chat();
+
+    if (!chat || chat.peerUserId !== null || this.isGroupLoading()) {
+      return;
+    }
+
+    this.addSelectedIds.set([]);
+    this.addMemberCandidates.set([]);
+    this.addMemberError.set('');
+    this.isAddMembersLoading.set(true);
+    this.isAddMembersOpen.set(true);
+
+    this.userProfileApi
+      .getUsers()
+      .pipe(
+        catchError(() => of<User[]>([])),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((users) => {
+        const memberIds = new Set(
+          this.groupMembers().map((member) => member.id),
+        );
+        this.addMemberCandidates.set(
+          users.filter((user) => !memberIds.has(user.id)),
+        );
+        this.isAddMembersLoading.set(false);
+      });
+  }
+
+  protected onAddMemberSelectionChange(memberIds: string[]): void {
+    this.addSelectedIds.set(memberIds);
+    this.addMemberError.set('');
+  }
+
+  protected addMembers(): void {
+    const chat = this.chat();
+    const memberIds = this.addSelectedIds();
+
+    if (!chat || memberIds.length === 0) {
+      this.addMemberError.set('Выберите участников');
+      return;
+    }
+
+    this.groupInfoApi.addMembers(chat.id, memberIds).subscribe(() => {
+      this.isAddMembersOpen.set(false);
+      this.loadGroupMembers(chat.id);
+    });
+  }
+
+  protected removeMember(member: User): void {
+    const chat = this.chat();
+
+    if (!chat || !this.isGroupOwner()) {
+      return;
+    }
+
+    this.groupInfoApi.removeMember(chat.id, member.id).subscribe(() => {
+      this.groupMembers.update((members) =>
+        members.filter((item) => item.id !== member.id),
+      );
+    });
+  }
+
+  private loadGroupMembers(chatId: string): void {
+    this.isGroupLoading.set(true);
 
     this.groupInfoApi
-      .getMembers(chat.id)
+      .getMembers(chatId)
       .pipe(
         catchError(() => of<User[]>([])),
         takeUntilDestroyed(this.destroyRef),
@@ -264,6 +414,20 @@ export class ChatWindow {
 
   protected memberInitials(member: User): string {
     return this.getInitials(member.displayName);
+  }
+
+  protected memberName(member: User): string {
+    let name = member.displayName;
+
+    if (member.id === this.currentUserId()) {
+      name += ' (Вы)';
+    }
+
+    if (member.id === this.chat()?.ownerId) {
+      name += ' (Администратор группы)';
+    }
+
+    return name;
   }
 
   protected requestDirectChat(member: User): void {
