@@ -1,8 +1,8 @@
 [
-  { "id": "1", "title": "Пользователь 1", "lastMessage": "Скинула макеты, глянь, пожалуйста", "unreadCount": 0, "peerUserId": "1" },
-  { "id": "2", "title": "Фронтенд-команда", "lastMessage": "Созвон в 19:00", "unreadCount": 0, "peerUserId": null },
-  { "id": "4", "title": "Дизайн-ревью", "lastMessage": "Анна: добавила комментарии в фигму", "unreadCount": 0, "peerUserId": null },
-  { "id": "6", "title": "Проект «Мессенджер»", "lastMessage": "Светлана: обновила API-контракт", "unreadCount": 0, "peerUserId": null },
-  { "id": "8", "title": "Отдел поддержки", "lastMessage": "Смена принята, всё тихо", "unreadCount": 0, "peerUserId": null },
-  { "id": "20", "title": "Тестировщики", "lastMessage": "Сборка 1.2.0 готова", "unreadCount": 0, "peerUserId": null }
+  { "id": "1", "title": "Пользователь 1", "lastMessage": "Скинула макеты, глянь, пожалуйста", "lastMessageAt": "2026-10-19T18:42:00+06:00", "lastMessageAuthorId": "2", "lastMessageAuthorName": "Аня Соколова", "unreadCount": 0, "peerUserId": "1" },
+  { "id": "2", "title": "Фронтенд-команда", "lastMessage": "Созвон в 19:00", "lastMessageAt": "2026-10-19T17:05:00+06:00", "lastMessageAuthorId": "2", "lastMessageAuthorName": "Аня Соколова", "unreadCount": 0, "peerUserId": null, "ownerId": "2" },
+  { "id": "4", "title": "Дизайн-ревью", "lastMessage": "Добавила комментарии в фигму", "lastMessageAt": "2026-10-19T12:40:00+06:00", "lastMessageAuthorId": "9", "lastMessageAuthorName": "Анна Королёва", "unreadCount": 0, "peerUserId": null, "ownerId": "9" },
+  { "id": "6", "title": "Проект «Мессенджер»", "lastMessage": "Обновила API-контракт", "lastMessageAt": "2026-10-18T14:30:00+06:00", "lastMessageAuthorId": "7", "lastMessageAuthorName": "Светлана Орлова", "unreadCount": 0, "peerUserId": null, "ownerId": "7" },
+  { "id": "8", "title": "Отдел поддержки", "lastMessage": "Смена принята, всё тихо", "lastMessageAt": "2026-10-15T22:30:00+06:00", "lastMessageAuthorId": "10", "lastMessageAuthorName": "Андрей Петров", "unreadCount": 0, "peerUserId": null, "ownerId": "10" },
+  { "id": "20", "title": "Тестировщики", "lastMessage": "Сборка 1.2.0 готова", "lastMessageAt": "2026-10-19T21:00:00+06:00", "lastMessageAuthorId": "12", "lastMessageAuthorName": "Дмитрий Козлов", "unreadCount": 0, "peerUserId": null, "ownerId": "12" }
 ]

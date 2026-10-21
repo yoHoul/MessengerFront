@@ -8,7 +8,11 @@ import { ChatWindow } from '../../core/components/chat-window/chat-window';
 import { SearchChat } from '../../core/components/search-chat/search-chat';
 import { SideMenu } from '../../core/components/side-menu/side-menu';
 import { ChatsApiService } from '../../core/services/chats-api.service';
+import { CurrentUserService } from '../../core/services/current-user.service';
+import { GroupInfoApiService } from '../../core/services/group-info-api.service';
 import { ChatListItem } from '../../core/type/chat-list-item';
+import { GroupCreateRequest } from '../../core/type/group-create-request';
+import { GroupRenameRequest } from '../../core/type/group-rename-request';
 import { Message } from '../../core/type/message';
 import { User } from '../../core/type/user';
 
@@ -20,6 +24,8 @@ import { User } from '../../core/type/user';
 })
 export class MainPage {
   private readonly chatsApi = inject(ChatsApiService);
+  private readonly currentUser = inject(CurrentUserService);
+  private readonly groupInfoApi = inject(GroupInfoApiService);
 
   private readonly chatsState = signal<ChatListItem[]>([]);
 
@@ -77,6 +83,55 @@ export class MainPage {
     this.openDirectChat(user);
   }
 
+  protected onGroupCreateRequested(request: GroupCreateRequest): void {    const currentUser = this.currentUser.currentUser();
+    const title = request.title.trim();
+
+    if (!currentUser || !title) {
+      return;
+    }
+
+    const chat: ChatListItem = {
+      id: Date.now().toString(),
+      title,
+      lastMessage: 'Нет сообщений',
+      lastMessageAt: null,
+      lastMessageAuthorId: null,
+      lastMessageAuthorName: null,
+      unreadCount: 0,
+      peerUserId: null,
+      ownerId: currentUser.id,
+    };
+
+    this.chatsState.update((chats) => [chat, ...chats]);
+
+    this.groupInfoApi
+      .createGroup(chat.id, currentUser.id, request.memberIds)
+      .subscribe(() => {
+        this.selectChat(chat.id);
+        this.query.set('');
+      });
+  }
+
+  protected onGroupRenamed(request: GroupRenameRequest): void {
+    this.chatsState.update((chats) =>
+      chats.map((chat) =>
+        chat.id === request.chatId ? { ...chat, title: request.title } : chat,
+      ),
+    );
+  }
+
+  protected onGroupDeleted(chatId: string): void {
+    this.chatsState.update((chats) =>
+      chats.filter((chat) => chat.id !== chatId),
+    );
+
+    if (this.selectedChatId() === chatId) {
+      this.selectedChatId.set(null);
+    }
+
+    this.query.set('');
+  }
+
   private openDirectChat(user: User): void {
     const existingChat = this.chats().find(
       (chat) => chat.peerUserId === user.id,
@@ -92,6 +147,9 @@ export class MainPage {
       id: Date.now().toString(),
       title: user.displayName,
       lastMessage: 'Нет сообщений',
+      lastMessageAt: null,
+      lastMessageAuthorId: null,
+      lastMessageAuthorName: null,
       unreadCount: 0,
       peerUserId: user.id,
     };
@@ -102,6 +160,8 @@ export class MainPage {
   }
 
   protected onMessageSent(message: Message): void {
+    const authorName = this.currentUser.currentUser()?.displayName ?? null;
+
     this.chatsState.update((chats) => {
       const chat = chats.find((item) => item.id === message.chatId);
 
@@ -110,7 +170,14 @@ export class MainPage {
       }
 
       return [
-        { ...chat, lastMessage: message.text, unreadCount: 0 },
+        {
+          ...chat,
+          lastMessage: message.text,
+          lastMessageAt: message.createdAt,
+          lastMessageAuthorId: message.authorId,
+          lastMessageAuthorName: authorName,
+          unreadCount: 0,
+        },
         ...chats.filter((item) => item.id !== message.chatId),
       ];
     });

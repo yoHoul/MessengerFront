@@ -39,11 +39,14 @@
             [chat]="selectedChat()"
             (messageSent)="onMessageSent($event)"
             (directChatRequested)="onDirectChatRequested($event)"
+            (groupRenamed)="onGroupRenamed($event)"
+            (groupDeleted)="onGroupDeleted($event)"
         ></app-chat-window>
     </div>
 
     <app-side-menu
         [visible]="isMenuOpen()"
         (visibleChange)="setMenuOpen($event)"
+        (groupCreateRequested)="onGroupCreateRequested($event)"
     ></app-side-menu>
 </div>

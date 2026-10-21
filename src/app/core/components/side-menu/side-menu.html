@@ -36,6 +36,13 @@
 
         <div class="divider"></div>
 
+        <p-button
+            label="Создать групповой чат"
+            [text]="true"
+            fluid
+            (onClick)="openCreateGroup()"
+        ></p-button>
+
         <div class="theme-row">
             <span>Ночная тема</span>
             <p-toggleswitch
@@ -158,6 +165,7 @@
     [visible]="isLogoutOpen()"
     (visibleChange)="isLogoutOpen.set($event)"
     header="Выйти из аккаунта?"
+    [draggable]="false"
     [modal]="true"
     [dismissableMask]="true"
 >
@@ -174,6 +182,57 @@
             severity="danger"
             (onClick)="confirmLogout()"
         ></p-button>
+    </div>
+</p-dialog>
+
+<p-dialog
+    [visible]="isCreateGroupOpen()"
+    (visibleChange)="isCreateGroupOpen.set($event)"
+    header="Создать групповой чат"
+    styleClass="group-create-dialog"
+    [draggable]="false"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <div class="group-create">
+        <p-avatar [label]="groupAvatarInitials()" shape="circle" size="xlarge"></p-avatar>
+
+        <label class="field">
+            <span>Название группы</span>
+            <input
+                pInputText
+                fluid
+                type="text"
+                [value]="createGroupTitle()"
+                (input)="onGroupTitleInput($event)"
+            />
+        </label>
+
+        @if (isCreateGroupLoading()) {
+            <p class="group-create__loading">Загрузка...</p>
+        } @else if (isCreateGroupOpen()) {
+            <app-user-picker
+                [users]="createGroupUsers()"
+                (selectionChange)="onGroupSelectionChange($event)"
+            ></app-user-picker>
+        }
+
+        @if (createGroupError()) {
+            <p class="error">{{ createGroupError() }}</p>
+        }
+
+        <div class="dialog-actions">
+            <p-button
+                label="Отмена"
+                [text]="true"
+                (onClick)="isCreateGroupOpen.set(false)"
+            ></p-button>
+            <p-button
+                label="Создать групповой чат"
+                [disabled]="!createGroupTitle().trim()"
+                (onClick)="createGroup()"
+            ></p-button>
+        </div>
     </div>
 </p-dialog>
 

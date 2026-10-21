@@ -1,0 +1,63 @@
+.user-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.user-picker__list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.user-picker__item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.user-picker__item:hover {
+    background: rgba(128, 128, 128, 0.15);
+}
+
+.user-picker__item--selected,
+.user-picker__item--selected:hover {
+    background: var(--p-primary-color, #3b82f6);
+    color: var(--p-primary-contrast-color, #ffffff);
+}
+
+.user-picker__info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.user-picker__name {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-picker__tag {
+    font-size: 13px;
+    opacity: 0.65;
+}
+
+.user-picker__empty {
+    margin: 0;
+    padding: 8px;
+    opacity: 0.7;
+}

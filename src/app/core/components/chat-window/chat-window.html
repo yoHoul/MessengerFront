@@ -111,6 +111,7 @@
     (visibleChange)="isProfileOpen.set($event)"
     header="Профиль"
     styleClass="user-profile-dialog"
+    [draggable]="false"
     [modal]="true"
     [dismissableMask]="true"
 >
@@ -148,12 +149,53 @@
     (visibleChange)="isGroupOpen.set($event)"
     header="Информация о группе"
     styleClass="group-info-dialog"
+    [draggable]="false"
     [modal]="true"
     [dismissableMask]="true"
 >
     <div class="group-info">
         <p-avatar [label]="initials()" shape="circle" size="xlarge"></p-avatar>
-        <span class="group-info__name">{{ chat()?.title }}</span>
+
+        @if (isGroupEditing()) {
+            <div class="group-info__edit">
+                <input
+                    pInputText
+                    fluid
+                    type="text"
+                    placeholder="Название группы"
+                    [value]="groupTitleDraft()"
+                    (input)="onGroupTitleInput($event)"
+                />
+
+                <div class="group-info__edit-actions">
+                    <p-button
+                        label="Отменить"
+                        [text]="true"
+                        (onClick)="cancelGroupRename()"
+                    ></p-button>
+                    <p-button
+                        label="Переименовать"
+                        [disabled]="!canRenameGroup()"
+                        (onClick)="renameGroup()"
+                    ></p-button>
+                </div>
+            </div>
+        } @else {
+            <div class="group-info__title-row">
+                <span class="group-info__name">{{ chat()?.title }}</span>
+
+                @if (isGroupOwner()) {
+                    <button
+                        type="button"
+                        class="group-info__edit-button"
+                        aria-label="Переименовать группу"
+                        (click)="startGroupRename()"
+                    >
+                        <i class="pi pi-pencil" aria-hidden="true"></i>
+                    </button>
+                }
+            </div>
+        }
 
         @if (isGroupLoading()) {
             <span class="group-info__count">Загрузка...</span>
@@ -170,9 +212,23 @@
                         size="large"
                     ></p-avatar>
                     <div class="group-member__info">
-                        <span class="group-member__name">{{ member.displayName }}{{ member.id === currentUserId() ? ' (Вы)' : '' }}</span>
+                        <span class="group-member__name">{{ memberName(member) }}</span>
                         <span class="group-member__tag">&#64;{{ member.username }}</span>
                     </div>
+
+                    @if (isGroupOwner() && member.id !== currentUserId()) {
+                        <p-button
+                            type="button"
+                            severity="danger"
+                            size="small"
+                            [text]="true"
+                            [rounded]="true"
+                            ariaLabel="Удалить участника"
+                            (onClick)="removeMember(member)"
+                        >
+                            <i class="pi pi-times" aria-hidden="true"></i>
+                        </p-button>
+                    }
 
                     @if (member.id !== currentUserId()) {
                         <p-button
@@ -189,5 +245,89 @@
                 </div>
             }
         </div>
+
+        <p-button
+            label="Добавить участника"
+            [text]="true"
+            fluid
+            [disabled]="isGroupLoading()"
+            (onClick)="openAddMembers()"
+        ></p-button>
+
+        @if (isGroupOwner()) {
+            <p-button
+                label="Удалить группу"
+                severity="danger"
+                [text]="true"
+                fluid
+                (onClick)="openDeleteGroup()"
+            ></p-button>
+        }
+    </div>
+</p-dialog>
+
+<p-dialog
+    [visible]="isAddMembersOpen()"
+    (visibleChange)="isAddMembersOpen.set($event)"
+    header="Добавить участника"
+    styleClass="group-add-dialog"
+    [draggable]="false"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <div class="add-members">
+        @if (isAddMembersLoading()) {
+            <p class="add-members__loading">Загрузка...</p>
+        } @else if (isAddMembersOpen()) {
+            <app-user-picker
+                [users]="addMemberCandidates()"
+                (selectionChange)="onAddMemberSelectionChange($event)"
+            ></app-user-picker>
+        }
+
+        @if (addMemberError()) {
+            <p class="error">{{ addMemberError() }}</p>
+        }
+
+        <div class="dialog-actions">
+            <p-button
+                label="Отмена"
+                [text]="true"
+                (onClick)="isAddMembersOpen.set(false)"
+            ></p-button>
+            <p-button
+                label="Добавить"
+                [disabled]="addSelectedIds().length === 0 || isAddMembersLoading()"
+                (onClick)="addMembers()"
+            ></p-button>
+        </div>
+    </div>
+</p-dialog>
+
+<p-dialog
+    [visible]="isDeleteGroupOpen()"
+    (visibleChange)="isDeleteGroupOpen.set($event)"
+    header="Удалить группу?"
+    styleClass="group-delete-dialog"
+    [draggable]="false"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <p class="delete-group-text">
+        Удалить группу «{{ chat()?.title }}»?
+        Действие нельзя отменить.
+    </p>
+
+    <div class="dialog-actions">
+        <p-button
+            label="Отмена"
+            [text]="true"
+            (onClick)="isDeleteGroupOpen.set(false)"
+        ></p-button>
+        <p-button
+            label="Удалить"
+            severity="danger"
+            (onClick)="confirmDeleteGroup()"
+        ></p-button>
     </div>
 </p-dialog>

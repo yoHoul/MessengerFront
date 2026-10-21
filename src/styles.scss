@@ -32,5 +32,22 @@ p {
 }
 
 .group-info-dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(520px, calc(100vw - 32px));
+    height: min(620px, calc(100vh - 48px));
+}
+
+.group-info-dialog .p-dialog-content {
+    flex: 1;
+    min-height: 0;
+}
+
+.group-create-dialog,
+.group-add-dialog {
     width: min(420px, calc(100vw - 32px));
+}
+
+.group-delete-dialog {
+    width: min(380px, calc(100vw - 32px));
 }
