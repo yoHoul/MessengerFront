@@ -27,7 +27,10 @@
                     </div>
 
                     <div class="chat-item__bottom">
-                        <span class="chat-item__message">{{ messagePreview(chat) }}</span>
+                        <span
+                            class="chat-item__message"
+                            [class.chat-item__message--draft]="draftFor(chat)"
+                        >{{ messagePreview(chat) }}</span>
 
                         @if (chat.unreadCount > 0) {
                             <p-badge

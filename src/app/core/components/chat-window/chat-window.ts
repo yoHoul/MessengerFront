@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DOCUMENT, DatePipe } from '@angular/common';
 import {
   Component,
   DestroyRef,
@@ -17,18 +17,25 @@ import { ButtonModule } from '@openng/optimus-ui/button';
 import { DialogModule } from '@openng/optimus-ui/dialog';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { Textarea } from '@openng/optimus-ui/textarea';
-import { catchError, of, switchMap, tap } from 'rxjs';
+import { catchError, of, switchMap } from 'rxjs';
 
 import { CurrentUserService } from '../../services/current-user.service';
+import { DraftsService } from '../../services/drafts.service';
 import { GroupInfoApiService } from '../../services/group-info-api.service';
-import { MessagesApiService } from '../../services/messages-api.service';
+import { MessagesStoreService } from '../../services/messages-store.service';
 import { UserProfileApiService } from '../../services/user-profile-api.service';
 import { ChatListItem } from '../../type/chat-list-item';
 import { ChatPreview } from '../../type/chat-preview';
 import { GroupRenameRequest } from '../../type/group-rename-request';
-import { Message } from '../../type/message';
+import { MessageForwardRequest } from '../../type/message-forward-request';
+import { Message, MessageAttachment, MessageReply } from '../../type/message';
 import { User } from '../../type/user';
 import { UserPicker } from '../user-picker/user-picker';
+
+interface MessageTextPart {
+  text: string;
+  href?: string;
+}
 
 @Component({
   imports: [
@@ -45,31 +52,39 @@ import { UserPicker } from '../user-picker/user-picker';
   templateUrl: './chat-window.html',
 })
 export class ChatWindow {
-  private readonly messagesApi = inject(MessagesApiService);
   private readonly currentUser = inject(CurrentUserService);
+  private readonly document = inject(DOCUMENT);
+  private readonly drafts = inject(DraftsService);
   private readonly userProfileApi = inject(UserProfileApiService);
   private readonly groupInfoApi = inject(GroupInfoApiService);
+  private readonly messagesStore = inject(MessagesStoreService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly messagesContainer =
     viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
 
-  private readonly messagesByChat = new Map<string, Message[]>();
+  private attachmentSequence = 0;
+  private highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly chat = input<ChatListItem | null>(null);
   readonly messageSent = output<Message>();
   readonly lastMessageChanged = output<ChatPreview>();
+  readonly forwardRequested = output<MessageForwardRequest>();
   readonly directChatRequested = output<User>();
   readonly groupRenamed = output<GroupRenameRequest>();
   readonly groupDeleted = output<string>();
 
   protected readonly messages = signal<Message[]>([]);
   protected readonly draft = signal('');
+  protected readonly pendingAttachments = signal<MessageAttachment[]>([]);
+  protected readonly selectedImage = signal<MessageAttachment | null>(null);
+  protected readonly isImageOpen = signal(false);
   protected readonly replyTo = signal<Message | null>(null);
   protected readonly editingMessageId = signal<string | null>(null);
   protected readonly editDraft = signal('');
   protected readonly messageToDelete = signal<Message | null>(null);
   protected readonly isDeleteMessageOpen = signal(false);
+  protected readonly highlightedMessageId = signal<string | null>(null);
   protected readonly isProfileOpen = signal(false);
   protected readonly profile = signal<User | null>(null);
   protected readonly usersById = signal<ReadonlyMap<string, User>>(new Map());
@@ -166,6 +181,8 @@ export class ChatWindow {
       .pipe(
         switchMap((chatId) => {
           this.messages.set([]);
+          this.clearPendingAttachments();
+          this.draft.set(chatId ? this.drafts.getDraft(chatId) : '');
           this.replyTo.set(null);
           this.editingMessageId.set(null);
           this.messageToDelete.set(null);
@@ -175,16 +192,9 @@ export class ChatWindow {
             return of<Message[]>([]);
           }
 
-          const cachedMessages = this.messagesByChat.get(chatId);
-
-          if (cachedMessages) {
-            return of(cachedMessages);
-          }
-
-          return this.messagesApi.getMessages(chatId).pipe(
-            tap((messages) => this.messagesByChat.set(chatId, messages)),
-            catchError(() => of<Message[]>([])),
-          );
+          return this.messagesStore
+            .getMessages(chatId)
+            .pipe(catchError(() => of<Message[]>([])));
         }),
         takeUntilDestroyed(),
       )
@@ -196,6 +206,12 @@ export class ChatWindow {
         const element = this.messagesContainer()?.nativeElement;
         element?.scrollTo({ top: element.scrollHeight });
       });
+    });
+
+    this.destroyRef.onDestroy(() => {
+      if (this.highlightTimer) {
+        clearTimeout(this.highlightTimer);
+      }
     });
   }
 
@@ -223,7 +239,14 @@ export class ChatWindow {
   }
 
   protected onDraftInput(event: Event): void {
-    this.draft.set((event.target as HTMLTextAreaElement).value);
+    const text = (event.target as HTMLTextAreaElement).value;
+    const chatId = this.chat()?.id;
+
+    this.draft.set(text);
+
+    if (chatId) {
+      this.drafts.setDraft(chatId, text);
+    }
   }
 
   protected onComposerEnter(event: Event): void {
@@ -240,9 +263,10 @@ export class ChatWindow {
   protected send(): void {
     const chat = this.chat();
     const text = this.draft().trim();
+    const attachments = this.pendingAttachments();
     const authorId = this.currentUser.currentUserId();
 
-    if (!chat || !text || !authorId) {
+    if (!chat || (!text && attachments.length === 0) || !authorId) {
       return;
     }
 
@@ -253,12 +277,66 @@ export class ChatWindow {
       text,
       createdAt: new Date().toISOString(),
       replyToId: this.replyTo()?.id ?? null,
+      replyTo: this.buildReplySnapshot(this.replyTo()),
+      attachments,
     };
 
     this.updateCurrentMessages([...this.messages(), message]);
     this.draft.set('');
+    this.drafts.clearDraft(chat.id);
+    this.pendingAttachments.set([]);
     this.replyTo.set(null);
     this.messageSent.emit(message);
+  }
+
+  protected onFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    const attachments = files.map((file): MessageAttachment => {
+      const id = `${Date.now()}-${this.attachmentSequence++}`;
+
+      return {
+        id,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: URL.createObjectURL(file),
+        isImage: file.type.startsWith('image/'),
+      };
+    });
+
+    this.pendingAttachments.update((items) => [...items, ...attachments]);
+    input.value = '';
+  }
+
+  protected removePendingAttachment(attachment: MessageAttachment): void {
+    URL.revokeObjectURL(attachment.url);
+    this.pendingAttachments.update((items) =>
+      items.filter((item) => item.id !== attachment.id),
+    );
+  }
+
+  private clearPendingAttachments(): void {
+    for (const attachment of this.pendingAttachments()) {
+      URL.revokeObjectURL(attachment.url);
+    }
+
+    this.pendingAttachments.set([]);
+  }
+
+  protected openImage(attachment: MessageAttachment): void {
+    this.selectedImage.set(attachment);
+    this.isImageOpen.set(true);
+  }
+
+  protected closeImage(): void {
+    this.isImageOpen.set(false);
+    this.selectedImage.set(null);
   }
 
   protected startReply(message: Message): void {
@@ -334,6 +412,13 @@ export class ChatWindow {
     this.isDeleteMessageOpen.set(true);
   }
 
+  protected requestForward(message: Message): void {
+    this.forwardRequested.emit({
+      message,
+      authorName: this.authorName(message),
+    });
+  }
+
   protected confirmDeleteMessage(): void {
     const message = this.messageToDelete();
 
@@ -354,17 +439,127 @@ export class ChatWindow {
   }
 
   protected replyText(message: Message): string {
-    return this.repliedMessage(message)?.text ?? 'Сообщение удалено';
+    if (message.replyTo) {
+      return message.replyTo.text;
+    }
+
+    const repliedMessage = this.repliedMessage(message);
+
+    return repliedMessage ? this.messageText(repliedMessage) : 'Сообщение удалено';
+  }
+
+  protected messageText(message: Message): string {
+    return (
+      message.text ||
+      message.attachments?.[0]?.name ||
+      (message.attachments?.length ? 'Вложение' : '')
+    );
+  }
+
+  protected messageTextParts(text: string): MessageTextPart[] {
+    const parts: MessageTextPart[] = [];
+    const linkPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+    let lastIndex = 0;
+
+    for (const match of text.matchAll(linkPattern)) {
+      const matchedText = match[0];
+      const index = match.index ?? 0;
+      const trailing = matchedText.match(/[.,!?;:)\]}'"»]+$/)?.[0] ?? '';
+      const linkText = trailing
+        ? matchedText.slice(0, -trailing.length)
+        : matchedText;
+
+      if (index > lastIndex) {
+        parts.push({ text: text.slice(lastIndex, index) });
+      }
+
+      if (linkText) {
+        parts.push({
+          text: linkText,
+          href: /^https?:\/\//i.test(linkText)
+            ? linkText
+            : `https://${linkText}`,
+        });
+      }
+
+      if (trailing) {
+        parts.push({ text: trailing });
+      }
+
+      lastIndex = index + matchedText.length;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push({ text: text.slice(lastIndex) });
+    }
+
+    return parts;
   }
 
   protected replyAuthorName(message: Message): string {
+    if (message.replyTo) {
+      return message.replyTo.authorName;
+    }
+
     const repliedMessage = this.repliedMessage(message);
 
     return repliedMessage ? this.authorName(repliedMessage) : 'Сообщение';
   }
 
+  protected jumpToMessage(message: Message): void {
+    const chat = this.chat();
+    const targetId = this.replyTargetId(message);
+
+    if (!chat || !targetId) {
+      return;
+    }
+
+    this.messagesStore
+      .ensureMessageLoaded(chat.id, targetId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((target) => {
+        if (!target) {
+          return;
+        }
+
+        this.messages.set(this.messagesStore.getLoadedMessages(chat.id));
+
+        queueMicrotask(() => {
+          const element = this.document.getElementById(`message-${targetId}`);
+          element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          this.highlightedMessageId.set(targetId);
+
+          if (this.highlightTimer) {
+            clearTimeout(this.highlightTimer);
+          }
+
+          this.highlightTimer = setTimeout(
+            () => this.highlightedMessageId.set(null),
+            1600,
+          );
+        });
+      });
+  }
+
+  private buildReplySnapshot(message: Message | null): MessageReply | null {
+    if (!message) {
+      return null;
+    }
+
+    return {
+      messageId: message.id,
+      authorId: message.authorId,
+      authorName: this.authorName(message),
+      text: this.messageText(message),
+    };
+  }
+
+  private replyTargetId(message: Message): string | null {
+    return message.replyTo?.messageId ?? message.replyToId ?? null;
+  }
+
   private repliedMessage(message: Message): Message | null {
-    const replyToId = message.replyToId;
+    const replyToId = this.replyTargetId(message);
 
     if (!replyToId) {
       return null;
@@ -385,7 +580,7 @@ export class ChatWindow {
     const chatId = this.chat()?.id;
 
     if (chatId) {
-      this.messagesByChat.set(chatId, messages);
+      this.messagesStore.setMessages(chatId, messages);
     }
   }
 
@@ -401,7 +596,9 @@ export class ChatWindow {
 
     this.lastMessageChanged.emit({
       chatId: chat.id,
-      lastMessage: lastMessage?.text ?? 'Нет сообщений',
+      lastMessage: lastMessage
+        ? this.messageText(lastMessage)
+        : 'Нет сообщений',
       lastMessageAt: lastMessage?.createdAt ?? null,
       lastMessageAuthorId: lastMessage?.authorId ?? null,
       lastMessageAuthorName: lastMessage

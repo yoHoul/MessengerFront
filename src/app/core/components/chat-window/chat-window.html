@@ -36,8 +36,10 @@
                 @for (message of messages(); track message.id) {
                     <div
                         class="message"
+                        [id]="'message-' + message.id"
                         [class.message--mine]="isMine(message)"
                         [class.message--editing]="editingMessageId() === message.id"
+                        [class.message--highlighted]="highlightedMessageId() === message.id"
                     >
                         @if (!isMine(message)) {
                             <button
@@ -92,18 +94,84 @@
                                 </div>
                             } @else {
                                 <div class="bubble">
-                                    @if (message.replyToId) {
-                                        <div class="reply-quote">
+                                    @if (message.forwardedFrom; as forwarded) {
+                                        <span class="forwarded-from">
+                                            Переслано от
+                                            <button
+                                                type="button"
+                                                class="forwarded-from__author"
+                                                (click)="openUserProfile(forwarded.authorId)"
+                                            >
+                                                {{ forwarded.authorName }}
+                                            </button>
+                                        </span>
+                                    }
+
+                                    @if (message.replyTo || message.replyToId) {
+                                        <button
+                                            type="button"
+                                            class="reply-quote"
+                                            aria-label="Перейти к сообщению"
+                                            (click)="jumpToMessage(message)"
+                                        >
                                             <span class="reply-quote__author">
                                                 {{ replyAuthorName(message) }}
                                             </span>
                                             <span class="reply-quote__text">
                                                 {{ replyText(message) }}
                                             </span>
+                                        </button>
+                                    }
+
+                                    @if (message.attachments?.length) {
+                                        <div class="attachments">
+                                            @for (attachment of message.attachments ?? []; track attachment.id) {
+                                                @if (attachment.isImage) {
+                                                    <button
+                                                        type="button"
+                                                        class="attachment-image"
+                                                        (click)="openImage(attachment)"
+                                                    >
+                                                        <img
+                                                            [src]="attachment.url"
+                                                            [alt]="attachment.name"
+                                                        />
+                                                    </button>
+                                                } @else {
+                                                    <div class="attachment-file">
+                                                        <i class="pi pi-file" aria-hidden="true"></i>
+                                                        <span class="attachment-file__name">
+                                                            {{ attachment.name }}
+                                                        </span>
+                                                        <a
+                                                            class="attachment-file__download"
+                                                            [href]="attachment.url"
+                                                            [download]="attachment.name"
+                                                            aria-label="Скачать файл"
+                                                        >
+                                                            <i class="pi pi-download" aria-hidden="true"></i>
+                                                        </a>
+                                                    </div>
+                                                }
+                                            }
                                         </div>
                                     }
 
-                                    <p class="text">{{ message.text }}</p>
+                                    @if (message.text) {
+                                        <p class="text">
+                                            @for (part of messageTextParts(message.text); track $index) {
+                                                @if (part.href) {
+                                                    <a
+                                                        [href]="part.href"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                    >{{ part.text }}</a>
+                                                } @else {
+                                                    {{ part.text }}
+                                                }
+                                            }
+                                        </p>
+                                    }
                                     <span class="time">
                                         {{ message.createdAt | date: 'HH:mm' }}
                                         @if (message.editedAt) {
@@ -120,6 +188,14 @@
                                         (click)="startReply(message)"
                                     >
                                         <i class="pi pi-reply" aria-hidden="true"></i>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="message__action"
+                                        aria-label="Переслать"
+                                        (click)="requestForward(message)"
+                                    >
+                                        <i class="pi pi-share-alt" aria-hidden="true"></i>
                                     </button>
 
                                     @if (isMine(message)) {
@@ -166,7 +242,7 @@
             <div class="composer-reply">
                 <div class="composer-reply__content">
                     <span class="composer-reply__author">{{ authorName(reply) }}</span>
-                    <span class="composer-reply__text">{{ reply.text }}</span>
+                    <span class="composer-reply__text">{{ messageText(reply) }}</span>
                 </div>
                 <button
                     type="button"
@@ -179,7 +255,55 @@
             </div>
         }
 
+        @if (pendingAttachments().length > 0) {
+            <div class="composer-attachments">
+                @for (attachment of pendingAttachments(); track attachment.id) {
+                    <div class="composer-attachment">
+                        @if (attachment.isImage) {
+                            <img
+                                class="composer-attachment__preview"
+                                [src]="attachment.url"
+                                [alt]="attachment.name"
+                            />
+                        } @else {
+                            <i class="pi pi-file" aria-hidden="true"></i>
+                        }
+
+                        <span class="composer-attachment__name">
+                            {{ attachment.name }}
+                        </span>
+
+                        <button
+                            type="button"
+                            class="composer-attachment__remove"
+                            aria-label="Убрать вложение"
+                            (click)="removePendingAttachment(attachment)"
+                        >
+                            <i class="pi pi-times" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+
         <div class="composer">
+            <button
+                type="button"
+                class="composer__attach"
+                aria-label="Прикрепить файл"
+                (click)="fileInput.click()"
+            >
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+            </button>
+
+            <input
+                #fileInput
+                type="file"
+                multiple
+                hidden
+                (change)="onFilesSelected($event)"
+            />
+
             <textarea
                 pTextarea
                 fluid
@@ -194,7 +318,7 @@
                 label="Отправить"
                 size="small"
                 [style]="{ height: '100%' }"
-                [disabled]="!draft().trim()"
+                [disabled]="!draft().trim() && pendingAttachments().length === 0"
                 (onClick)="send()"
             ></p-button>
         </div>
@@ -453,3 +577,40 @@
         ></p-button>
     </div>
 </p-dialog>
+
+@if (isImageOpen()) {
+    <div
+        class="image-viewer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Просмотр изображения"
+        (click)="closeImage()"
+    >
+        @if (selectedImage(); as image) {
+            <div
+                class="image-viewer__header"
+                (click)="$event.stopPropagation()"
+            >
+                <span class="image-viewer__title">{{ image.name }}</span>
+
+                <button
+                    type="button"
+                    class="image-viewer__close"
+                    aria-label="Закрыть"
+                    (click)="closeImage()"
+                >
+                    <i class="pi pi-times" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="image-viewer__body" (click)="closeImage()">
+                <img
+                    class="image-preview"
+                    [src]="image.url"
+                    [alt]="image.name"
+                    (click)="$event.stopPropagation()"
+                />
+            </div>
+        }
+    </div>
+}

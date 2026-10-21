@@ -5,20 +5,31 @@ import { BarsIcon } from '@openng/optimus-ui/icons/bars';
 import { ChatMenu } from '../../core/components/chat-menu/chat-menu';
 import { ChatSearchResults } from '../../core/components/chat-search-results/chat-search-results';
 import { ChatWindow } from '../../core/components/chat-window/chat-window';
+import { ForwardDialog } from '../../core/components/forward-dialog/forward-dialog';
 import { SearchChat } from '../../core/components/search-chat/search-chat';
 import { SideMenu } from '../../core/components/side-menu/side-menu';
 import { ChatsApiService } from '../../core/services/chats-api.service';
 import { CurrentUserService } from '../../core/services/current-user.service';
 import { GroupInfoApiService } from '../../core/services/group-info-api.service';
+import { MessagesStoreService } from '../../core/services/messages-store.service';
 import { ChatListItem } from '../../core/type/chat-list-item';
 import { ChatPreview } from '../../core/type/chat-preview';
 import { GroupCreateRequest } from '../../core/type/group-create-request';
 import { GroupRenameRequest } from '../../core/type/group-rename-request';
 import { Message } from '../../core/type/message';
+import { MessageForwardRequest } from '../../core/type/message-forward-request';
 import { User } from '../../core/type/user';
 
 @Component({
-  imports: [BarsIcon, ChatMenu, ChatSearchResults, ChatWindow, SearchChat, SideMenu],
+  imports: [
+    BarsIcon,
+    ChatMenu,
+    ChatSearchResults,
+    ChatWindow,
+    ForwardDialog,
+    SearchChat,
+    SideMenu,
+  ],
   selector: 'app-main-page',
   styleUrl: './main-page.scss',
   templateUrl: './main-page.html',
@@ -27,11 +38,15 @@ export class MainPage {
   private readonly chatsApi = inject(ChatsApiService);
   private readonly currentUser = inject(CurrentUserService);
   private readonly groupInfoApi = inject(GroupInfoApiService);
+  private readonly messagesStore = inject(MessagesStoreService);
 
   private readonly chatsState = signal<ChatListItem[]>([]);
 
   protected readonly chats = this.chatsState.asReadonly();
   protected readonly isMenuOpen = signal(false);
+  protected readonly isForwardOpen = signal(false);
+  protected readonly forwardMessage = signal<Message | null>(null);
+  protected readonly forwardAuthorName = signal('');
   protected readonly query = signal('');
   protected readonly selectedChatId = signal<string | null>(null);
 
@@ -42,6 +57,16 @@ export class MainPage {
   protected readonly selectedChat = computed(
     () => this.chats().find((chat) => chat.id === this.selectedChatId()) ?? null,
   );
+
+  protected readonly forwardPreview = computed(() => {
+    const message = this.forwardMessage();
+
+    if (!message) {
+      return '';
+    }
+
+    return message.text || message.attachments?.[0]?.name || 'Вложение';
+  });
 
   constructor() {
     this.chatsApi
@@ -149,6 +174,64 @@ export class MainPage {
     );
   }
 
+  protected onForwardRequested(request: MessageForwardRequest): void {
+    this.forwardMessage.set(request.message);
+    this.forwardAuthorName.set(request.authorName);
+    this.isForwardOpen.set(true);
+  }
+
+  protected onForwardSelected(targetChatId: string): void {
+    const message = this.forwardMessage();
+    const authorName = this.forwardAuthorName();
+    const currentUser = this.currentUser.currentUser();
+
+    if (!message || !authorName || !currentUser || targetChatId === message.chatId) {
+      return;
+    }
+
+    const forwarded: Message = {
+      id: Date.now().toString(),
+      chatId: targetChatId,
+      authorId: currentUser.id,
+      text: message.text,
+      createdAt: new Date().toISOString(),
+      attachments: message.attachments,
+      forwardedFrom: {
+        authorId: message.authorId,
+        authorName,
+      },
+    };
+
+    this.messagesStore.appendMessage(targetChatId, forwarded).subscribe(() => {
+      const preview =
+        forwarded.text || forwarded.attachments?.[0]?.name || 'Вложение';
+
+      this.chatsState.update((chats) => {
+        const targetChat = chats.find((chat) => chat.id === targetChatId);
+
+        if (!targetChat) {
+          return chats;
+        }
+
+        return [
+          {
+            ...targetChat,
+            lastMessage: preview,
+            lastMessageAt: forwarded.createdAt,
+            lastMessageAuthorId: currentUser.id,
+            lastMessageAuthorName: currentUser.displayName,
+            unreadCount: 0,
+          },
+          ...chats.filter((chat) => chat.id !== targetChatId),
+        ];
+      });
+
+      this.isForwardOpen.set(false);
+      this.forwardMessage.set(null);
+      this.forwardAuthorName.set('');
+    });
+  }
+
   private openDirectChat(user: User): void {
     const existingChat = this.chats().find(
       (chat) => chat.peerUserId === user.id,
@@ -178,6 +261,7 @@ export class MainPage {
 
   protected onMessageSent(message: Message): void {
     const authorName = this.currentUser.currentUser()?.displayName ?? null;
+    const preview = message.text || message.attachments?.[0]?.name || 'Вложение';
 
     this.chatsState.update((chats) => {
       const chat = chats.find((item) => item.id === message.chatId);
@@ -189,7 +273,7 @@ export class MainPage {
       return [
         {
           ...chat,
-          lastMessage: message.text,
+          lastMessage: preview,
           lastMessageAt: message.createdAt,
           lastMessageAuthorId: message.authorId,
           lastMessageAuthorName: authorName,
