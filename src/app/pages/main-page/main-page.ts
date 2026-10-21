@@ -11,6 +11,7 @@ import { ChatsApiService } from '../../core/services/chats-api.service';
 import { CurrentUserService } from '../../core/services/current-user.service';
 import { GroupInfoApiService } from '../../core/services/group-info-api.service';
 import { ChatListItem } from '../../core/type/chat-list-item';
+import { ChatPreview } from '../../core/type/chat-preview';
 import { GroupCreateRequest } from '../../core/type/group-create-request';
 import { GroupRenameRequest } from '../../core/type/group-rename-request';
 import { Message } from '../../core/type/message';
@@ -130,6 +131,22 @@ export class MainPage {
     }
 
     this.query.set('');
+  }
+
+  protected onLastMessageChanged(preview: ChatPreview): void {
+    this.chatsState.update((chats) =>
+      chats.map((chat) =>
+        chat.id === preview.chatId
+          ? {
+              ...chat,
+              lastMessage: preview.lastMessage,
+              lastMessageAt: preview.lastMessageAt,
+              lastMessageAuthorId: preview.lastMessageAuthorId,
+              lastMessageAuthorName: preview.lastMessageAuthorName,
+            }
+          : chat,
+      ),
+    );
   }
 
   private openDirectChat(user: User): void {

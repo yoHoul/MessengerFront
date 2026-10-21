@@ -45,7 +45,15 @@ export class ChatSearchResults {
 
   private apiRequestId = 0;
 
+  protected readonly tagSearch = computed(() =>
+    this.query().trim().startsWith('@'),
+  );
+
   protected readonly localChats = computed(() => {
+    if (this.tagSearch()) {
+      return [];
+    }
+
     const query = this.query().trim().toLocaleLowerCase();
 
     if (!query) {
@@ -84,9 +92,12 @@ export class ChatSearchResults {
         debounceTime(250),
         distinctUntilChanged(),
         switchMap((query) => {
+          const tagSearch = query.startsWith('@');
+          const searchTerm = (tagSearch ? query.slice(1) : query).trim();
+
           this.users.set([]);
 
-          if (query.length < 2) {
+          if (!searchTerm || (!tagSearch && searchTerm.length < 2)) {
             this.isUsersLoading.set(false);
             return of<User[]>([]);
           }
@@ -94,7 +105,7 @@ export class ChatSearchResults {
           const requestId = ++this.apiRequestId;
           this.isUsersLoading.set(true);
 
-          return this.searchUsersApi.searchUsers(query).pipe(
+          return this.searchUsersApi.searchUsers(searchTerm, tagSearch).pipe(
             catchError(() => of<User[]>([])),
             finalize(() => {
               if (requestId === this.apiRequestId) {

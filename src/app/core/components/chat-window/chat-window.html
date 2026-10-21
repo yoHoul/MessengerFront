@@ -34,7 +34,11 @@
                 <p class="empty">Сообщений пока нет</p>
             } @else {
                 @for (message of messages(); track message.id) {
-                    <div class="message" [class.message--mine]="isMine(message)">
+                    <div
+                        class="message"
+                        [class.message--mine]="isMine(message)"
+                        [class.message--editing]="editingMessageId() === message.id"
+                    >
                         @if (!isMine(message)) {
                             <button
                                 type="button"
@@ -60,10 +64,84 @@
                                 </button>
                             }
 
-                            <div class="bubble">
-                                <p class="text">{{ message.text }}</p>
-                                <span class="time">{{ message.createdAt | date: 'HH:mm' }}</span>
-                            </div>
+                            @if (editingMessageId() === message.id) {
+                                <div class="message__edit">
+                                    <textarea
+                                        pTextarea
+                                        fluid
+                                        rows="3"
+                                        [value]="editDraft()"
+                                        (input)="onEditInput($event)"
+                                        (keydown.enter)="onEditEnter($event)"
+                                    ></textarea>
+
+                                    <div class="message__edit-actions">
+                                        <p-button
+                                            label="Отмена"
+                                            [text]="true"
+                                            size="small"
+                                            (onClick)="cancelEdit()"
+                                        ></p-button>
+                                        <p-button
+                                            label="Сохранить"
+                                            size="small"
+                                            [disabled]="!editDraft().trim()"
+                                            (onClick)="saveEdit()"
+                                        ></p-button>
+                                    </div>
+                                </div>
+                            } @else {
+                                <div class="bubble">
+                                    @if (message.replyToId) {
+                                        <div class="reply-quote">
+                                            <span class="reply-quote__author">
+                                                {{ replyAuthorName(message) }}
+                                            </span>
+                                            <span class="reply-quote__text">
+                                                {{ replyText(message) }}
+                                            </span>
+                                        </div>
+                                    }
+
+                                    <p class="text">{{ message.text }}</p>
+                                    <span class="time">
+                                        {{ message.createdAt | date: 'HH:mm' }}
+                                        @if (message.editedAt) {
+                                            <span class="edited">· изм.</span>
+                                        }
+                                    </span>
+                                </div>
+
+                                <div class="message__actions">
+                                    <button
+                                        type="button"
+                                        class="message__action"
+                                        aria-label="Ответить"
+                                        (click)="startReply(message)"
+                                    >
+                                        <i class="pi pi-reply" aria-hidden="true"></i>
+                                    </button>
+
+                                    @if (isMine(message)) {
+                                        <button
+                                            type="button"
+                                            class="message__action"
+                                            aria-label="Редактировать"
+                                            (click)="startEdit(message)"
+                                        >
+                                            <i class="pi pi-pencil" aria-hidden="true"></i>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="message__action"
+                                            aria-label="Удалить"
+                                            (click)="requestDeleteMessage(message)"
+                                        >
+                                            <i class="pi pi-trash" aria-hidden="true"></i>
+                                        </button>
+                                    }
+                                </div>
+                            }
                         </div>
 
                         @if (isMine(message)) {
@@ -84,19 +162,38 @@
             }
         </div>
 
+        @if (replyTo(); as reply) {
+            <div class="composer-reply">
+                <div class="composer-reply__content">
+                    <span class="composer-reply__author">{{ authorName(reply) }}</span>
+                    <span class="composer-reply__text">{{ reply.text }}</span>
+                </div>
+                <button
+                    type="button"
+                    class="composer-reply__cancel"
+                    aria-label="Отменить ответ"
+                    (click)="cancelReply()"
+                >
+                    <i class="pi pi-times" aria-hidden="true"></i>
+                </button>
+            </div>
+        }
+
         <div class="composer">
-            <input
-                pInputText
+            <textarea
+                pTextarea
                 fluid
-                type="text"
+                autoResize
+                rows="1"
                 placeholder="Сообщение"
                 [value]="draft()"
                 (input)="onDraftInput($event)"
-                (keydown.enter)="send()"
-            />
+                (keydown.enter)="onComposerEnter($event)"
+            ></textarea>
             <p-button
                 label="Отправить"
                 size="small"
+                [style]="{ height: '100%' }"
                 [disabled]="!draft().trim()"
                 (onClick)="send()"
             ></p-button>
@@ -328,6 +425,31 @@
             label="Удалить"
             severity="danger"
             (onClick)="confirmDeleteGroup()"
+        ></p-button>
+    </div>
+</p-dialog>
+
+<p-dialog
+    [visible]="isDeleteMessageOpen()"
+    (visibleChange)="isDeleteMessageOpen.set($event)"
+    header="Удалить сообщение?"
+    styleClass="delete-message-dialog"
+    [draggable]="false"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <p class="delete-message-text">Удалить это сообщение?</p>
+
+    <div class="dialog-actions">
+        <p-button
+            label="Отмена"
+            [text]="true"
+            (onClick)="isDeleteMessageOpen.set(false)"
+        ></p-button>
+        <p-button
+            label="Удалить"
+            severity="danger"
+            (onClick)="confirmDeleteMessage()"
         ></p-button>
     </div>
 </p-dialog>

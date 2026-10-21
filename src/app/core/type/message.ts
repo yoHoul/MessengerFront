@@ -4,4 +4,6 @@ export interface Message {
   authorId: string;
   text: string;
   createdAt: string;
+  replyToId?: string | null;
+  editedAt?: string | null;
 }

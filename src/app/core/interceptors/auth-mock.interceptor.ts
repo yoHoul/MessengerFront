@@ -9,6 +9,7 @@ import { Observable, of, throwError } from 'rxjs';
 import appUsersData from '../../../mocks/appUsersData.json';
 import { AuthCredentials, AuthSession, ProfileUpdate } from '../type/auth';
 import { User } from '../type/user';
+import { sanitizeTag } from '../utils/tag';
 
 interface AppUserRecord {
   id: string;
@@ -88,10 +89,17 @@ export const authMockInterceptor: HttpInterceptorFn = (request, next) => {
     }
 
     const normalizedLogin = login.toLowerCase();
+    const username = sanitizeTag(login);
+
+    if (!username) {
+      return badRequest(request.url);
+    }
+
+    const normalizedUsername = username.toLowerCase();
     const isTaken = accounts.some(
       (account) =>
         account.login.toLowerCase() === normalizedLogin ||
-        account.username.toLowerCase() === normalizedLogin,
+        account.username.toLowerCase() === normalizedUsername,
     );
 
     if (isTaken) {
@@ -102,7 +110,7 @@ export const authMockInterceptor: HttpInterceptorFn = (request, next) => {
       id: nextAccountId(),
       login,
       password,
-      username: login,
+      username,
       displayName: login,
       avatarUrl: null,
     };
@@ -159,7 +167,7 @@ export const authMockInterceptor: HttpInterceptorFn = (request, next) => {
 
     const profile = request.body as ProfileUpdate | null;
     const displayName = profile?.displayName?.trim();
-    const username = profile?.username?.trim();
+    const username = sanitizeTag(profile?.username);
 
     if (!displayName || !username) {
       return badRequest(request.url);

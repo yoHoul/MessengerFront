@@ -16,13 +16,15 @@ import { AvatarModule } from '@openng/optimus-ui/avatar';
 import { ButtonModule } from '@openng/optimus-ui/button';
 import { DialogModule } from '@openng/optimus-ui/dialog';
 import { InputText } from '@openng/optimus-ui/inputtext';
-import { catchError, of, switchMap } from 'rxjs';
+import { Textarea } from '@openng/optimus-ui/textarea';
+import { catchError, of, switchMap, tap } from 'rxjs';
 
 import { CurrentUserService } from '../../services/current-user.service';
 import { GroupInfoApiService } from '../../services/group-info-api.service';
 import { MessagesApiService } from '../../services/messages-api.service';
 import { UserProfileApiService } from '../../services/user-profile-api.service';
 import { ChatListItem } from '../../type/chat-list-item';
+import { ChatPreview } from '../../type/chat-preview';
 import { GroupRenameRequest } from '../../type/group-rename-request';
 import { Message } from '../../type/message';
 import { User } from '../../type/user';
@@ -35,6 +37,7 @@ import { UserPicker } from '../user-picker/user-picker';
     DatePipe,
     DialogModule,
     InputText,
+    Textarea,
     UserPicker,
   ],
   selector: 'app-chat-window',
@@ -51,14 +54,22 @@ export class ChatWindow {
   private readonly messagesContainer =
     viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
 
+  private readonly messagesByChat = new Map<string, Message[]>();
+
   readonly chat = input<ChatListItem | null>(null);
   readonly messageSent = output<Message>();
+  readonly lastMessageChanged = output<ChatPreview>();
   readonly directChatRequested = output<User>();
   readonly groupRenamed = output<GroupRenameRequest>();
   readonly groupDeleted = output<string>();
 
   protected readonly messages = signal<Message[]>([]);
   protected readonly draft = signal('');
+  protected readonly replyTo = signal<Message | null>(null);
+  protected readonly editingMessageId = signal<string | null>(null);
+  protected readonly editDraft = signal('');
+  protected readonly messageToDelete = signal<Message | null>(null);
+  protected readonly isDeleteMessageOpen = signal(false);
   protected readonly isProfileOpen = signal(false);
   protected readonly profile = signal<User | null>(null);
   protected readonly usersById = signal<ReadonlyMap<string, User>>(new Map());
@@ -155,14 +166,25 @@ export class ChatWindow {
       .pipe(
         switchMap((chatId) => {
           this.messages.set([]);
+          this.replyTo.set(null);
+          this.editingMessageId.set(null);
+          this.messageToDelete.set(null);
+          this.isDeleteMessageOpen.set(false);
 
           if (!chatId) {
             return of<Message[]>([]);
           }
 
-          return this.messagesApi
-            .getMessages(chatId)
-            .pipe(catchError(() => of<Message[]>([])));
+          const cachedMessages = this.messagesByChat.get(chatId);
+
+          if (cachedMessages) {
+            return of(cachedMessages);
+          }
+
+          return this.messagesApi.getMessages(chatId).pipe(
+            tap((messages) => this.messagesByChat.set(chatId, messages)),
+            catchError(() => of<Message[]>([])),
+          );
         }),
         takeUntilDestroyed(),
       )
@@ -201,7 +223,18 @@ export class ChatWindow {
   }
 
   protected onDraftInput(event: Event): void {
-    this.draft.set((event.target as HTMLInputElement).value);
+    this.draft.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  protected onComposerEnter(event: Event): void {
+    const keyboardEvent = event as KeyboardEvent;
+
+    if (keyboardEvent.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    this.send();
   }
 
   protected send(): void {
@@ -219,11 +252,162 @@ export class ChatWindow {
       authorId,
       text,
       createdAt: new Date().toISOString(),
+      replyToId: this.replyTo()?.id ?? null,
     };
 
-    this.messages.update((messages) => [...messages, message]);
+    this.updateCurrentMessages([...this.messages(), message]);
     this.draft.set('');
+    this.replyTo.set(null);
     this.messageSent.emit(message);
+  }
+
+  protected startReply(message: Message): void {
+    this.replyTo.set(message);
+    this.editingMessageId.set(null);
+  }
+
+  protected cancelReply(): void {
+    this.replyTo.set(null);
+  }
+
+  protected startEdit(message: Message): void {
+    if (!this.isMine(message)) {
+      return;
+    }
+
+    this.editingMessageId.set(message.id);
+    this.editDraft.set(message.text);
+    this.replyTo.set(null);
+  }
+
+  protected cancelEdit(): void {
+    this.editingMessageId.set(null);
+    this.editDraft.set('');
+  }
+
+  protected onEditInput(event: Event): void {
+    this.editDraft.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  protected onEditEnter(event: Event): void {
+    const keyboardEvent = event as KeyboardEvent;
+
+    if (keyboardEvent.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    this.saveEdit();
+  }
+
+  protected saveEdit(): void {
+    const messageId = this.editingMessageId();
+    const text = this.editDraft().trim();
+
+    if (!messageId || !text) {
+      return;
+    }
+
+    const messages = this.messages().map((message) =>
+      message.id === messageId
+        ? { ...message, text, editedAt: new Date().toISOString() }
+        : message,
+    );
+
+    this.updateCurrentMessages(messages);
+    this.editingMessageId.set(null);
+    this.editDraft.set('');
+
+    const editedMessage = messages.find((message) => message.id === messageId);
+
+    if (editedMessage && this.isLastMessage(editedMessage)) {
+      this.emitLastMessagePreview();
+    }
+  }
+
+  protected requestDeleteMessage(message: Message): void {
+    if (!this.isMine(message)) {
+      return;
+    }
+
+    this.messageToDelete.set(message);
+    this.isDeleteMessageOpen.set(true);
+  }
+
+  protected confirmDeleteMessage(): void {
+    const message = this.messageToDelete();
+
+    if (!message) {
+      return;
+    }
+
+    const wasLast = this.isLastMessage(message);
+    const messages = this.messages().filter((item) => item.id !== message.id);
+
+    this.updateCurrentMessages(messages);
+    this.messageToDelete.set(null);
+    this.isDeleteMessageOpen.set(false);
+
+    if (wasLast) {
+      this.emitLastMessagePreview();
+    }
+  }
+
+  protected replyText(message: Message): string {
+    return this.repliedMessage(message)?.text ?? 'Сообщение удалено';
+  }
+
+  protected replyAuthorName(message: Message): string {
+    const repliedMessage = this.repliedMessage(message);
+
+    return repliedMessage ? this.authorName(repliedMessage) : 'Сообщение';
+  }
+
+  private repliedMessage(message: Message): Message | null {
+    const replyToId = message.replyToId;
+
+    if (!replyToId) {
+      return null;
+    }
+
+    return this.messages().find((item) => item.id === replyToId) ?? null;
+  }
+
+  private isLastMessage(message: Message): boolean {
+    const messages = this.messages();
+
+    return messages[messages.length - 1]?.id === message.id;
+  }
+
+  private updateCurrentMessages(messages: Message[]): void {
+    this.messages.set(messages);
+
+    const chatId = this.chat()?.id;
+
+    if (chatId) {
+      this.messagesByChat.set(chatId, messages);
+    }
+  }
+
+  private emitLastMessagePreview(): void {
+    const chat = this.chat();
+
+    if (!chat) {
+      return;
+    }
+
+    const messages = this.messages();
+    const lastMessage = messages[messages.length - 1] ?? null;
+
+    this.lastMessageChanged.emit({
+      chatId: chat.id,
+      lastMessage: lastMessage?.text ?? 'Нет сообщений',
+      lastMessageAt: lastMessage?.createdAt ?? null,
+      lastMessageAuthorId: lastMessage?.authorId ?? null,
+      lastMessageAuthorName: lastMessage
+        ? this.authorName(lastMessage)
+        : null,
+    });
   }
 
   protected openProfile(): void {
