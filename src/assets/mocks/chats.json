@@ -4,7 +4,7 @@
   { "id": "3", "type": "direct", "title": null, "lastMessage": "Ок, беру на себя", "createdAt": "2026-09-01T10:00:00+06:00" },
   { "id": "4", "type": "group", "title": "Дизайн-ревью", "lastMessage": "Анна: добавила комментарии в фигму", "createdAt": "2026-09-01T10:00:00+06:00" },
   { "id": "5", "type": "direct", "title": null, "lastMessage": "Спасибо за ревью!", "createdAt": "2026-09-01T10:00:00+06:00" },
-  { "id": "6", "type": "group", "title": "Проект «Мессенджер»", "lastMessage": "Илья: обновил API-контракт", "createdAt": "2026-09-01T10:00:00+06:00" },
+  { "id": "6", "type": "group", "title": "Проект «Мессенджер»", "lastMessage": "Светлана: обновила API-контракт", "createdAt": "2026-09-01T10:00:00+06:00" },
   { "id": "7", "type": "direct", "title": null, "lastMessage": "Договорились", "createdAt": "2026-09-01T10:00:00+06:00" },
   { "id": "8", "type": "group", "title": "Отдел поддержки", "lastMessage": "Смена принята, всё тихо", "createdAt": "2026-09-01T10:00:00+06:00" },
   { "id": "9", "type": "direct", "title": null, "lastMessage": "Скинь ссылку на задачу", "createdAt": "2026-09-01T10:00:00+06:00" },

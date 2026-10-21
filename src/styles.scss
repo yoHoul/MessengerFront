@@ -26,3 +26,11 @@ p {
 .account-dialog {
     width: min(560px, calc(100vw - 32px));
 }
+
+.user-profile-dialog {
+    width: min(340px, calc(100vw - 32px));
+}
+
+.group-info-dialog {
+    width: min(420px, calc(100vw - 32px));
+}

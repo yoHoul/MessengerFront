@@ -19,6 +19,8 @@ interface AppUserRecord {
   avatarUrl: string | null;
 }
 
+const FIRST_ACCOUNT_ID = 1000;
+
 const accounts = appUsersData as AppUserRecord[];
 
 function nextAccountId(): string {
@@ -27,7 +29,7 @@ function nextAccountId(): string {
     return Number.isFinite(id) ? Math.max(max, id) : max;
   }, 0);
 
-  return String(maxId + 1);
+  return String(Math.max(maxId + 1, FIRST_ACCOUNT_ID));
 }
 
 function toUser(account: AppUserRecord): User {

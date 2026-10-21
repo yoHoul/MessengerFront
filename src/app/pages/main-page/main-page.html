@@ -38,6 +38,7 @@
         <app-chat-window
             [chat]="selectedChat()"
             (messageSent)="onMessageSent($event)"
+            (directChatRequested)="onDirectChatRequested($event)"
         ></app-chat-window>
     </div>
 

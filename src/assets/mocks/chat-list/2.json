@@ -2,7 +2,7 @@
   { "id": "1", "title": "Пользователь 1", "lastMessage": "Скинула макеты, глянь, пожалуйста", "unreadCount": 0, "peerUserId": "1" },
   { "id": "2", "title": "Фронтенд-команда", "lastMessage": "Созвон в 19:00", "unreadCount": 0, "peerUserId": null },
   { "id": "4", "title": "Дизайн-ревью", "lastMessage": "Анна: добавила комментарии в фигму", "unreadCount": 0, "peerUserId": null },
-  { "id": "6", "title": "Проект «Мессенджер»", "lastMessage": "Илья: обновил API-контракт", "unreadCount": 0, "peerUserId": null },
+  { "id": "6", "title": "Проект «Мессенджер»", "lastMessage": "Светлана: обновила API-контракт", "unreadCount": 0, "peerUserId": null },
   { "id": "8", "title": "Отдел поддержки", "lastMessage": "Смена принята, всё тихо", "unreadCount": 0, "peerUserId": null },
   { "id": "20", "title": "Тестировщики", "lastMessage": "Сборка 1.2.0 готова", "unreadCount": 0, "peerUserId": null }
 ]

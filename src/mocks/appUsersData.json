@@ -1,4 +1,4 @@
 [
   { "id": "1", "login": "user1", "password": "123", "username": "user1", "displayName": "Пользователь 1", "avatarUrl": null },
-  { "id": "2", "login": "user2", "password": "123", "username": "user2", "displayName": "Пользователь 2", "avatarUrl": null }
+  { "id": "2", "login": "user2", "password": "123", "username": "anya_sokolova", "displayName": "Аня Соколова", "avatarUrl": null }
 ]
