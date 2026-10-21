@@ -4,7 +4,7 @@
   { "id": "3", "title": "Максим Иванов", "lastMessage": "Ок, беру на себя", "unreadCount": 0, "peerUserId": "3" },
   { "id": "4", "title": "Дизайн-ревью", "lastMessage": "Анна: добавила комментарии в фигму", "unreadCount": 5, "peerUserId": null },
   { "id": "5", "title": "Кирилл Морозов", "lastMessage": "Спасибо за ревью!", "unreadCount": 0, "peerUserId": "4" },
-  { "id": "6", "title": "Проект «Мессенджер»", "lastMessage": "Илья: обновил API-контракт", "unreadCount": 1, "peerUserId": null },
+  { "id": "6", "title": "Проект «Мессенджер»", "lastMessage": "Светлана: обновила API-контракт", "unreadCount": 1, "peerUserId": null },
   { "id": "7", "title": "Ольга Белова", "lastMessage": "Договорились", "unreadCount": 0, "peerUserId": "5" },
   { "id": "8", "title": "Отдел поддержки", "lastMessage": "Смена принята, всё тихо", "unreadCount": 0, "peerUserId": null },
   { "id": "9", "title": "Иван Дорофеев", "lastMessage": "Скинь ссылку на задачу", "unreadCount": 3, "peerUserId": "6" },

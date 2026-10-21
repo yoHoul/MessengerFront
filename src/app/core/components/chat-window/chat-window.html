@@ -1,8 +1,32 @@
 <div class="container">
     @if (chat(); as currentChat) {
         <div class="header">
-            <p-avatar [label]="initials()" shape="circle"></p-avatar>
-            <span class="title">{{ currentChat.title }}</span>
+            @if (isGroup()) {
+                <button
+                    type="button"
+                    class="profile-trigger"
+                    aria-label="Информация о группе"
+                    (click)="openGroup()"
+                >
+                    <p-avatar [label]="initials()" shape="circle"></p-avatar>
+                    <span class="title">{{ currentChat.title }}</span>
+                </button>
+            } @else if (canOpenProfile()) {
+                <button
+                    type="button"
+                    class="profile-trigger"
+                    aria-label="Открыть профиль"
+                    (click)="openProfile()"
+                >
+                    <p-avatar [label]="initials()" shape="circle"></p-avatar>
+                    <span class="title">{{ currentChat.title }}</span>
+                </button>
+            } @else {
+                <div class="profile-trigger profile-trigger--static">
+                    <p-avatar [label]="initials()" shape="circle"></p-avatar>
+                    <span class="title">{{ currentChat.title }}</span>
+                </div>
+            }
         </div>
 
         <div class="messages" #messagesContainer>
@@ -11,10 +35,50 @@
             } @else {
                 @for (message of messages(); track message.id) {
                     <div class="message" [class.message--mine]="isMine(message)">
-                        <div class="bubble">
-                            <p class="text">{{ message.text }}</p>
-                            <span class="time">{{ message.createdAt | date: 'HH:mm' }}</span>
+                        @if (!isMine(message)) {
+                            <button
+                                type="button"
+                                class="message__avatar"
+                                aria-label="Открыть профиль"
+                                (click)="openUserProfile(message.authorId)"
+                            >
+                                <p-avatar
+                                    [label]="authorInitials(message)"
+                                    shape="circle"
+                                ></p-avatar>
+                            </button>
+                        }
+
+                        <div class="message__content">
+                            @if (isGroup()) {
+                                <button
+                                    type="button"
+                                    class="message__author"
+                                    (click)="openUserProfile(message.authorId)"
+                                >
+                                    {{ authorName(message) }}
+                                </button>
+                            }
+
+                            <div class="bubble">
+                                <p class="text">{{ message.text }}</p>
+                                <span class="time">{{ message.createdAt | date: 'HH:mm' }}</span>
+                            </div>
                         </div>
+
+                        @if (isMine(message)) {
+                            <button
+                                type="button"
+                                class="message__avatar"
+                                aria-label="Открыть профиль"
+                                (click)="openUserProfile(message.authorId)"
+                            >
+                                <p-avatar
+                                    [label]="authorInitials(message)"
+                                    shape="circle"
+                                ></p-avatar>
+                            </button>
+                        }
                     </div>
                 }
             }
@@ -41,3 +105,89 @@
         <div class="empty-state">Выберите чат</div>
     }
 </div>
+
+<p-dialog
+    [visible]="isProfileOpen()"
+    (visibleChange)="isProfileOpen.set($event)"
+    header="Профиль"
+    styleClass="user-profile-dialog"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <div class="user-profile">
+        <p-avatar [label]="profileInitials()" shape="circle" size="xlarge"></p-avatar>
+
+        @if (profile(); as peer) {
+            <span class="user-profile__name">{{ profileName() }}</span>
+            <span class="user-profile__tag">&#64;{{ peer.username }}</span>
+
+            @if (!profileIsCurrentUser()) {
+                <p-button
+                    type="button"
+                    class="user-profile__action"
+                    [style]="{ width: '3rem', height: '3rem', borderRadius: '50%' }"
+                    severity="secondary"
+                    [rounded]="true"
+                    ariaLabel="Написать"
+                    (onClick)="requestDirectChat(peer)"
+                >
+                    <i
+                        class="pi pi-comments user-profile__action-icon"
+                        aria-hidden="true"
+                    ></i>
+                </p-button>
+            }
+        } @else {
+            <span class="user-profile__name">{{ profileName() }}</span>
+        }
+    </div>
+</p-dialog>
+
+<p-dialog
+    [visible]="isGroupOpen()"
+    (visibleChange)="isGroupOpen.set($event)"
+    header="Информация о группе"
+    styleClass="group-info-dialog"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <div class="group-info">
+        <p-avatar [label]="initials()" shape="circle" size="xlarge"></p-avatar>
+        <span class="group-info__name">{{ chat()?.title }}</span>
+
+        @if (isGroupLoading()) {
+            <span class="group-info__count">Загрузка...</span>
+        } @else {
+            <span class="group-info__count">{{ groupMemberCountLabel() }}</span>
+        }
+
+        <div class="group-info__members">
+            @for (member of groupMembers(); track member.id) {
+                <div class="group-member">
+                    <p-avatar
+                        [label]="memberInitials(member)"
+                        shape="circle"
+                        size="large"
+                    ></p-avatar>
+                    <div class="group-member__info">
+                        <span class="group-member__name">{{ member.displayName }}{{ member.id === currentUserId() ? ' (Вы)' : '' }}</span>
+                        <span class="group-member__tag">&#64;{{ member.username }}</span>
+                    </div>
+
+                    @if (member.id !== currentUserId()) {
+                        <p-button
+                            type="button"
+                            severity="secondary"
+                            size="small"
+                            [rounded]="true"
+                            ariaLabel="Написать"
+                            (onClick)="requestDirectChat(member)"
+                        >
+                            <i class="pi pi-comments" aria-hidden="true"></i>
+                        </p-button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</p-dialog>

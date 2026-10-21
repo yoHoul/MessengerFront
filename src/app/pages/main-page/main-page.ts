@@ -70,6 +70,14 @@ export class MainPage {
   }
 
   protected onSearchUserSelected(user: User): void {
+    this.openDirectChat(user);
+  }
+
+  protected onDirectChatRequested(user: User): void {
+    this.openDirectChat(user);
+  }
+
+  private openDirectChat(user: User): void {
     const existingChat = this.chats().find(
       (chat) => chat.peerUserId === user.id,
     );

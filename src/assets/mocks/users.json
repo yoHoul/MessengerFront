@@ -1,5 +1,5 @@
 [
-  { "id": "1", "username": "me", "displayName": "Пользователь 1", "avatarUrl": null },
+  { "id": "1", "username": "user1", "displayName": "Пользователь 1", "avatarUrl": null },
   { "id": "2", "username": "anya_sokolova", "displayName": "Аня Соколова", "avatarUrl": null },
   { "id": "3", "username": "maksim_ivanov", "displayName": "Максим Иванов", "avatarUrl": null },
   { "id": "4", "username": "kirill_morozov", "displayName": "Кирилл Морозов", "avatarUrl": null },
