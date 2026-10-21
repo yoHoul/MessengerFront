@@ -6,6 +6,7 @@ import { BadgeModule } from '@openng/optimus-ui/badge';
 import { ListboxModule } from '@openng/optimus-ui/listbox';
 
 import { CurrentUserService } from '../../services/current-user.service';
+import { DraftsService } from '../../services/drafts.service';
 import { ChatListItem } from '../../type/chat-list-item';
 
 @Component({
@@ -16,6 +17,7 @@ import { ChatListItem } from '../../type/chat-list-item';
 })
 export class ChatMenu {
   private readonly currentUser = inject(CurrentUserService);
+  private readonly drafts = inject(DraftsService);
 
   readonly chats = input.required<ChatListItem[]>();
   readonly selectedChatId = input<string | null>(null);
@@ -35,6 +37,12 @@ export class ChatMenu {
   }
 
   protected messagePreview(chat: ChatListItem): string {
+    const draft = this.draftFor(chat);
+
+    if (draft) {
+      return `Черновик: ${draft}`;
+    }
+
     const isMine = chat.lastMessageAuthorId === this.currentUserId();
     const prefix = isMine
       ? 'Вы: '
@@ -43,6 +51,14 @@ export class ChatMenu {
         : '';
 
     return `${prefix}${chat.lastMessage}`;
+  }
+
+  protected draftFor(chat: ChatListItem): string {
+    if (chat.id === this.selectedChatId()) {
+      return '';
+    }
+
+    return this.drafts.drafts().get(chat.id) ?? '';
   }
 
   protected initials(chat: ChatListItem): string {

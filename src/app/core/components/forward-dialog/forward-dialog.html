@@ -1,0 +1,40 @@
+<p-dialog
+    [visible]="visible()"
+    (visibleChange)="visibleChange.emit($event)"
+    header="Переслать сообщение"
+    styleClass="forward-dialog"
+    [draggable]="false"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <p class="forward-dialog__preview">{{ messagePreview() }}</p>
+
+    <div class="forward-dialog__list">
+        @for (chat of availableChats(); track chat.id) {
+            <button
+                type="button"
+                class="forward-dialog__chat"
+                [class.forward-dialog__chat--selected]="selectedChatId() === chat.id"
+                (click)="selectChat(chat.id)"
+            >
+                <p-avatar [label]="initials(chat)" shape="circle"></p-avatar>
+                <span class="forward-dialog__chat-title">{{ chat.title }}</span>
+            </button>
+        } @empty {
+            <p class="forward-dialog__empty">Нет других чатов</p>
+        }
+    </div>
+
+    <div class="dialog-actions">
+        <p-button
+            label="Отмена"
+            [text]="true"
+            (onClick)="visibleChange.emit(false)"
+        ></p-button>
+        <p-button
+            label="Переслать"
+            [disabled]="!selectedChatId()"
+            (onClick)="confirmForward()"
+        ></p-button>
+    </div>
+</p-dialog>

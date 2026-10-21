@@ -1,0 +1,70 @@
+:host {
+    display: contents;
+}
+
+.forward-dialog__preview {
+    display: -webkit-box;
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: rgba(128, 128, 128, 0.15);
+    font-size: 13px;
+    opacity: 0.8;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.forward-dialog__list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.forward-dialog__chat {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.forward-dialog__chat:hover {
+    background: rgba(128, 128, 128, 0.15);
+}
+
+.forward-dialog__chat--selected,
+.forward-dialog__chat--selected:hover {
+    background: var(--p-primary-color, #3b82f6);
+    color: var(--p-primary-contrast-color, #ffffff);
+}
+
+.forward-dialog__chat-title {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.forward-dialog__empty {
+    margin: 0;
+    padding: 8px;
+    opacity: 0.7;
+}
+
+.dialog-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 12px;
+}

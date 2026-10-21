@@ -39,11 +39,21 @@
             [chat]="selectedChat()"
             (messageSent)="onMessageSent($event)"
             (lastMessageChanged)="onLastMessageChanged($event)"
+            (forwardRequested)="onForwardRequested($event)"
             (directChatRequested)="onDirectChatRequested($event)"
             (groupRenamed)="onGroupRenamed($event)"
             (groupDeleted)="onGroupDeleted($event)"
         ></app-chat-window>
     </div>
+
+    <app-forward-dialog
+        [visible]="isForwardOpen()"
+        [chats]="chats()"
+        [sourceChatId]="selectedChatId()"
+        [messagePreview]="forwardPreview()"
+        (visibleChange)="isForwardOpen.set($event)"
+        (forward)="onForwardSelected($event)"
+    ></app-forward-dialog>
 
     <app-side-menu
         [visible]="isMenuOpen()"
