@@ -5,6 +5,8 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { ChatListItem } from '../type/chat-list-item';
 import { CurrentUserService } from './current-user.service';
 
+const CHAT_LIST_MOCK_VERSION = '2';
+
 @Injectable({ providedIn: 'root' })
 export class ChatsApiService {
   private readonly http = inject(HttpClient);
@@ -18,7 +20,9 @@ export class ChatsApiService {
     }
 
     return this.http
-      .get<ChatListItem[]>(`assets/mocks/chat-list/${userId}.json`)
+      .get<ChatListItem[]>(
+        `assets/mocks/chat-list/${userId}.json?v=${CHAT_LIST_MOCK_VERSION}`,
+      )
       .pipe(
         catchError((error: HttpErrorResponse) =>
           error.status === 404 ? of([]) : throwError(() => error),
