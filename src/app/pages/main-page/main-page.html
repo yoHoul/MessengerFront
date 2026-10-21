@@ -38,6 +38,7 @@
         <app-chat-window
             [chat]="selectedChat()"
             (messageSent)="onMessageSent($event)"
+            (lastMessageChanged)="onLastMessageChanged($event)"
             (directChatRequested)="onDirectChatRequested($event)"
             (groupRenamed)="onGroupRenamed($event)"
             (groupDeleted)="onGroupDeleted($event)"

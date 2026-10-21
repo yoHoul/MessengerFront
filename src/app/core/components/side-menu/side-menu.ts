@@ -25,6 +25,7 @@ import { ThemeService } from '../../services/theme.service';
 import { UserProfileApiService } from '../../services/user-profile-api.service';
 import { GroupCreateRequest } from '../../type/group-create-request';
 import { User } from '../../type/user';
+import { sanitizeTag } from '../../utils/tag';
 import { UserPicker } from '../user-picker/user-picker';
 
 @Component({
@@ -218,7 +219,14 @@ export class SideMenu {
   }
 
   protected onProfileUsernameInput(event: Event): void {
-    this.profileUsername.set((event.target as HTMLInputElement).value);
+    const input = event.target as HTMLInputElement;
+    const username = sanitizeTag(input.value);
+
+    if (input.value !== username) {
+      input.value = username;
+    }
+
+    this.profileUsername.set(username);
     this.profileError.set('');
     this.profileSuccess.set('');
   }
