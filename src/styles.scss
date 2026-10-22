@@ -255,6 +255,20 @@ p {
     opacity: 0.6;
 }
 
+.messages__error {
+    align-self: center;
+    margin: 12px 0;
+    color: #e5484d;
+    font-size: 13px;
+}
+
+.chat-action-error {
+    margin: 0;
+    padding: 6px 16px;
+    color: #e5484d;
+    font-size: 12px;
+}
+
 .password-field {
     position: relative;
     display: flex;

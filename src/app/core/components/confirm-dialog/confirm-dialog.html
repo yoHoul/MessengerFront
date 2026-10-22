@@ -1,0 +1,24 @@
+<p-dialog
+    [visible]="visible()"
+    (visibleChange)="visibleChange.emit($event)"
+    [header]="header()"
+    [styleClass]="dialogClass()"
+    [draggable]="false"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <p class="confirm-dialog__text">{{ text() }}</p>
+
+    <div class="confirm-dialog__actions">
+        <p-button
+            label="Отмена"
+            [text]="true"
+            (onClick)="visibleChange.emit(false)"
+        ></p-button>
+        <p-button
+            [label]="confirmLabel()"
+            severity="danger"
+            (onClick)="confirmed.emit()"
+        ></p-button>
+    </div>
+</p-dialog>

@@ -4,9 +4,11 @@ import {
   HttpRequest,
   HttpResponse,
 } from '@angular/common/http';
+import { inject } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 
 import appUsersData from '../../../mocks/appUsersData.json';
+import { UserProfileApiService } from '../services/user-profile-api.service';
 import { AuthCredentials, AuthSession, ProfileUpdate } from '../type/auth';
 import { User } from '../type/user';
 import { sanitizeTag } from '../utils/tag';
@@ -79,6 +81,8 @@ function conflict(url: string): Observable<never> {
 }
 
 export const authMockInterceptor: HttpInterceptorFn = (request, next) => {
+  const userProfileApi = inject(UserProfileApiService);
+
   if (request.method === 'POST' && request.url.endsWith('/api/auth/register')) {
     const credentials = request.body as AuthCredentials | null;
     const login = credentials?.login?.trim();
@@ -116,6 +120,7 @@ export const authMockInterceptor: HttpInterceptorFn = (request, next) => {
     };
 
     accounts.push(account);
+    userProfileApi.upsertUser(toUser(account));
 
     const session: AuthSession = {
       token: tokenFor(account),
@@ -186,6 +191,7 @@ export const authMockInterceptor: HttpInterceptorFn = (request, next) => {
 
     account.displayName = displayName;
     account.username = username;
+    userProfileApi.upsertUser(toUser(account));
 
     return of(new HttpResponse({ status: 200, body: toUser(account) }));
   }

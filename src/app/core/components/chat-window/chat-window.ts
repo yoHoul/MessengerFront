@@ -1,4 +1,4 @@
-import { DOCUMENT, DatePipe } from '@angular/common';
+import { DOCUMENT } from '@angular/common';
 import {
   Component,
   DestroyRef,
@@ -13,13 +13,10 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { AvatarModule } from '@openng/optimus-ui/avatar';
-import { ButtonModule } from '@openng/optimus-ui/button';
-import { DialogModule } from '@openng/optimus-ui/dialog';
-import { InputText } from '@openng/optimus-ui/inputtext';
-import { Textarea } from '@openng/optimus-ui/textarea';
-import { Observable, Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
+import { catchError, of, switchMap } from 'rxjs';
 
 import { CurrentUserService } from '../../services/current-user.service';
+import { AttachmentsApiService } from '../../services/attachments-api.service';
 import { DraftsService } from '../../services/drafts.service';
 import { GroupInfoApiService } from '../../services/group-info-api.service';
 import { MessagesApiService } from '../../services/messages-api.service';
@@ -28,33 +25,29 @@ import { UserProfileApiService } from '../../services/user-profile-api.service';
 import { ChatListItem } from '../../type/chat-list-item';
 import { ChatPreview } from '../../type/chat-preview';
 import { GroupRenameRequest } from '../../type/group-rename-request';
-import { MessageForwardRequest } from '../../type/message-forward-request';
-import { Message, MessageAttachment, MessageReply } from '../../type/message';
+import { Message, MessageAttachment } from '../../type/message';
 import { ChatMessagesState } from '../../type/message-page';
 import { User } from '../../type/user';
-import { UserPicker } from '../user-picker/user-picker';
-
-interface MessageTextPart {
-  text: string;
-  href?: string;
-}
-
-interface MessageSearchOutcome {
-  messages: Message[];
-  source: 'local' | 'api' | null;
-}
+import { AddMembersDialog } from '../add-members-dialog/add-members-dialog';
+import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
+import { GroupInfoDialog } from '../group-info-dialog/group-info-dialog';
+import { MessageComposer } from '../message-composer/message-composer';
+import { MessageItem } from '../message-item/message-item';
+import { MessageSearch } from '../message-search/message-search';
+import { UserProfileDialog } from '../user-profile-dialog/user-profile-dialog';
 
 type ScrollMode = 'bottom' | 'preserve' | 'none';
 
 @Component({
   imports: [
+    AddMembersDialog,
     AvatarModule,
-    ButtonModule,
-    DatePipe,
-    DialogModule,
-    InputText,
-    Textarea,
-    UserPicker,
+    ConfirmDialog,
+    GroupInfoDialog,
+    MessageComposer,
+    MessageItem,
+    MessageSearch,
+    UserProfileDialog,
   ],
   selector: 'app-chat-window',
   styleUrl: './chat-window.scss',
@@ -63,6 +56,7 @@ type ScrollMode = 'bottom' | 'preserve' | 'none';
 export class ChatWindow {
   private readonly currentUser = inject(CurrentUserService);
   private readonly document = inject(DOCUMENT);
+  private readonly attachmentsApi = inject(AttachmentsApiService);
   private readonly drafts = inject(DraftsService);
   private readonly userProfileApi = inject(UserProfileApiService);
   private readonly groupInfoApi = inject(GroupInfoApiService);
@@ -72,12 +66,8 @@ export class ChatWindow {
 
   private readonly messagesContainer =
     viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
-  private readonly messageSearchInput =
-    viewChild<ElementRef<HTMLInputElement>>('messageSearchInput');
 
-  private attachmentSequence = 0;
   private highlightTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly searchQuery$ = new Subject<string>();
   private readonly scrollMode = signal<ScrollMode>('bottom');
   private scrollAnchorHeight = 0;
   private scrollAnchorTop = 0;
@@ -86,25 +76,25 @@ export class ChatWindow {
   readonly chat = input<ChatListItem | null>(null);
   readonly messageSent = output<Message>();
   readonly lastMessageChanged = output<ChatPreview>();
-  readonly forwardRequested = output<MessageForwardRequest>();
+  readonly forwardRequested = output<Message>();
   readonly directChatRequested = output<User>();
   readonly groupRenamed = output<GroupRenameRequest>();
   readonly groupDeleted = output<string>();
 
-  protected readonly messages = signal<Message[]>([]);
+  protected readonly messages = computed(() => {
+    const chatId = this.chat()?.id;
+    return chatId ? this.messagesStore.getState(chatId)?.messages ?? [] : [];
+  });
   protected readonly draft = signal('');
   protected readonly pendingAttachments = signal<MessageAttachment[]>([]);
   protected readonly selectedImage = signal<MessageAttachment | null>(null);
   protected readonly hasMoreBefore = signal(false);
   protected readonly isLoadingOlder = signal(false);
+  protected readonly isSending = signal(false);
+  protected readonly isUploadingAttachments = signal(false);
+  protected readonly messagesError = signal<string | null>(null);
+  protected readonly actionError = signal<string | null>(null);
   protected readonly isMessageSearchOpen = signal(false);
-  protected readonly messageSearchQuery = signal('');
-  protected readonly messageSearchResults = signal<Message[]>([]);
-  protected readonly messageSearchSource = signal<'local' | 'api' | null>(
-    null,
-  );
-  protected readonly hasMessageSearchRun = signal(false);
-  protected readonly isMessageSearchLoading = signal(false);
   protected readonly isImageOpen = signal(false);
   protected readonly replyTo = signal<Message | null>(null);
   protected readonly editingMessageId = signal<string | null>(null);
@@ -149,45 +139,13 @@ export class ChatWindow {
     return draft.length > 0 && draft !== currentTitle;
   });
 
-  protected readonly profileIsCurrentUser = computed(
-    () => this.profile()?.id === this.currentUser.currentUserId(),
-  );
-
-  protected readonly profileName = computed(() => {
-    const profile = this.profile();
-
-    if (!profile) {
-      return this.isGroup() ? 'Пользователь' : this.chat()?.title ?? '';
-    }
-
-    return `${profile.displayName}${this.profileIsCurrentUser() ? ' (Вы)' : ''}`;
-  });
-
   protected readonly initials = computed(() =>
     this.getInitials(this.chat()?.title ?? ''),
   );
 
-  protected readonly profileInitials = computed(() =>
-    this.getInitials(this.profileName()),
+  protected readonly currentUserName = computed(
+    () => this.currentUser.currentUser()?.displayName ?? '',
   );
-
-  protected readonly groupMemberCountLabel = computed(() => {
-    const count = this.groupMembers().length;
-    const mod100 = count % 100;
-    const mod10 = count % 10;
-
-    let word = 'участников';
-
-    if (mod100 < 11 || mod100 > 14) {
-      if (mod10 === 1) {
-        word = 'участник';
-      } else if (mod10 >= 2 && mod10 <= 4) {
-        word = 'участника';
-      }
-    }
-
-    return `${count} ${word}`;
-  });
 
   private readonly chatId = computed(() => this.chat()?.id ?? null);
 
@@ -207,18 +165,18 @@ export class ChatWindow {
     toObservable(this.chatId)
       .pipe(
         switchMap((chatId) => {
-          this.messages.set([]);
           this.hasMoreBefore.set(false);
           this.isLoadingOlder.set(false);
           this.scrollMode.set('bottom');
           this.closeMessageSearch(false);
-          this.searchQuery$.next('');
           this.clearPendingAttachments();
           this.draft.set(chatId ? this.drafts.getDraft(chatId) : '');
           this.replyTo.set(null);
           this.editingMessageId.set(null);
           this.messageToDelete.set(null);
           this.isDeleteMessageOpen.set(false);
+          this.messagesError.set(null);
+          this.actionError.set(null);
 
           if (!chatId) {
             return of<ChatMessagesState>({
@@ -230,63 +188,24 @@ export class ChatWindow {
           }
 
           return this.messagesStore.getInitialPage(chatId).pipe(
-            catchError(() =>
-              of<ChatMessagesState>({
+            catchError(() => {
+              this.messagesError.set('Не удалось загрузить сообщения');
+              return of<ChatMessagesState>({
                 messages: [],
                 hasMoreBefore: false,
                 nextBefore: null,
                 loadingOlder: false,
-              }),
-            ),
+              });
+            }),
           );
         }),
         takeUntilDestroyed(),
       )
       .subscribe((state) => {
         this.scrollMode.set('bottom');
-        this.messages.set(state.messages);
         this.hasMoreBefore.set(state.hasMoreBefore);
         this.isLoadingOlder.set(false);
-      });
-
-    this.searchQuery$
-      .pipe(
-        debounceTime(200),
-        distinctUntilChanged(),
-        switchMap((query): Observable<MessageSearchOutcome> => {
-          const chatId = this.chat()?.id;
-          const normalizedQuery = query.trim();
-          const localResults = this.messages().filter((message) =>
-            this.matchesSearch(message, normalizedQuery),
-          );
-
-          this.hasMessageSearchRun.set(false);
-          this.messageSearchSource.set(null);
-          this.messageSearchResults.set([]);
-          this.isMessageSearchLoading.set(false);
-
-          if (!chatId || normalizedQuery.length < 2) {
-            return of({ messages: [], source: null });
-          }
-
-          if (localResults.length > 0) {
-            return of({ messages: localResults, source: 'local' as const });
-          }
-
-          this.isMessageSearchLoading.set(true);
-
-          return this.messagesApi.searchMessages(chatId, normalizedQuery).pipe(
-            map((messages) => ({ messages, source: 'api' as const })),
-            catchError(() => of({ messages: [], source: 'api' as const })),
-          );
-        }),
-        takeUntilDestroyed(),
-      )
-      .subscribe((outcome) => {
-        this.messageSearchResults.set(outcome.messages);
-        this.messageSearchSource.set(outcome.source);
-        this.isMessageSearchLoading.set(false);
-        this.hasMessageSearchRun.set(outcome.source !== null);
+        this.messagesError.set(null);
       });
 
     effect(() => {
@@ -338,12 +257,7 @@ export class ChatWindow {
     );
   }
 
-  protected authorInitials(message: Message): string {
-    return this.getInitials(this.authorName(message));
-  }
-
-  protected onDraftInput(event: Event): void {
-    const text = (event.target as HTMLTextAreaElement).value;
+  protected onDraftChange(text: string): void {
     const chatId = this.chat()?.id;
 
     this.draft.set(text);
@@ -353,71 +267,90 @@ export class ChatWindow {
     }
   }
 
-  protected onComposerEnter(event: Event): void {
-    const keyboardEvent = event as KeyboardEvent;
+  protected replyPreviewAuthor(): string {
+    const reply = this.replyTo();
+    return reply ? this.authorName(reply) : '';
+  }
 
-    if (keyboardEvent.shiftKey) {
-      return;
-    }
-
-    event.preventDefault();
-    this.send();
+  protected replyPreviewText(): string {
+    const reply = this.replyTo();
+    return reply ? this.messageText(reply) : '';
   }
 
   protected send(): void {
     const chat = this.chat();
     const text = this.draft().trim();
+    const replyToId = this.replyTo()?.id ?? null;
     const attachments = this.pendingAttachments();
-    const authorId = this.currentUser.currentUserId();
 
-    if (!chat || (!text && attachments.length === 0) || !authorId) {
+    if (
+      !chat ||
+      (!text && attachments.length === 0) ||
+      this.isSending() ||
+      this.isUploadingAttachments()
+    ) {
       return;
     }
 
-    const message: Message = {
-      id: Date.now().toString(),
-      chatId: chat.id,
-      authorId,
-      text,
-      createdAt: new Date().toISOString(),
-      replyToId: this.replyTo()?.id ?? null,
-      replyTo: this.buildReplySnapshot(this.replyTo()),
-      attachments,
-    };
+    this.isSending.set(true);
+    this.actionError.set(null);
 
-    this.closeMessageSearch(false);
-    this.scrollMode.set('bottom');
-    this.updateCurrentMessages([...this.messages(), message]);
-    this.draft.set('');
-    this.drafts.clearDraft(chat.id);
-    this.pendingAttachments.set([]);
-    this.replyTo.set(null);
-    this.messageSent.emit(message);
+    this.messagesApi
+      .sendMessage(chat.id, { text, replyToId, attachments })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (message) => {
+          this.isSending.set(false);
+          this.actionError.set(null);
+          this.closeMessageSearch(false);
+          this.scrollMode.set('bottom');
+          this.updateCurrentMessages([...this.messages(), message]);
+
+          if (this.draft().trim() === text) {
+            this.draft.set('');
+            this.drafts.clearDraft(chat.id);
+          }
+
+          this.pendingAttachments.update((items) =>
+            items.filter(
+              (item) => !attachments.some((sent) => sent.id === item.id),
+            ),
+          );
+
+          if (this.replyTo()?.id === replyToId) {
+            this.replyTo.set(null);
+          }
+
+          this.messageSent.emit(message);
+        },
+        error: () => {
+          this.isSending.set(false);
+          this.actionError.set('Не удалось отправить сообщение');
+        },
+      });
   }
 
-  protected onFilesSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const files = Array.from(input.files ?? []);
-
-    if (files.length === 0) {
+  protected onFilesSelected(files: File[]): void {
+    if (files.length === 0 || this.isUploadingAttachments()) {
       return;
     }
 
-    const attachments = files.map((file): MessageAttachment => {
-      const id = `${Date.now()}-${this.attachmentSequence++}`;
+    this.isUploadingAttachments.set(true);
 
-      return {
-        id,
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        url: URL.createObjectURL(file),
-        isImage: file.type.startsWith('image/'),
-      };
-    });
-
-    this.pendingAttachments.update((items) => [...items, ...attachments]);
-    input.value = '';
+    this.attachmentsApi
+      .upload(files)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (attachments) => {
+          this.isUploadingAttachments.set(false);
+          this.actionError.set(null);
+          this.pendingAttachments.update((items) => [...items, ...attachments]);
+        },
+        error: () => {
+          this.isUploadingAttachments.set(false);
+          this.actionError.set('Не удалось загрузить вложение');
+        },
+      });
   }
 
   protected removePendingAttachment(attachment: MessageAttachment): void {
@@ -469,44 +402,39 @@ export class ChatWindow {
     this.editDraft.set('');
   }
 
-  protected onEditInput(event: Event): void {
-    this.editDraft.set((event.target as HTMLTextAreaElement).value);
-  }
-
-  protected onEditEnter(event: Event): void {
-    const keyboardEvent = event as KeyboardEvent;
-
-    if (keyboardEvent.shiftKey) {
-      return;
-    }
-
-    event.preventDefault();
-    this.saveEdit();
-  }
-
   protected saveEdit(): void {
+    const chat = this.chat();
     const messageId = this.editingMessageId();
     const text = this.editDraft().trim();
 
-    if (!messageId || !text) {
+    if (!chat || !messageId || !text) {
       return;
     }
 
-    const messages = this.messages().map((message) =>
-      message.id === messageId
-        ? { ...message, text, editedAt: new Date().toISOString() }
-        : message,
-    );
+    this.messagesApi
+      .editMessage(chat.id, messageId, text)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (editedMessage) => {
+          if (!editedMessage) {
+            return;
+          }
 
-    this.updateCurrentMessages(messages);
-    this.editingMessageId.set(null);
-    this.editDraft.set('');
+          const messages = this.messages().map((message) =>
+            message.id === messageId ? editedMessage : message,
+          );
 
-    const editedMessage = messages.find((message) => message.id === messageId);
+          this.actionError.set(null);
+          this.updateCurrentMessages(messages);
+          this.editingMessageId.set(null);
+          this.editDraft.set('');
 
-    if (editedMessage && this.isLastMessage(editedMessage)) {
-      this.emitLastMessagePreview();
-    }
+          if (this.isLastMessage(editedMessage)) {
+            this.emitLastMessagePreview();
+          }
+        },
+        error: () => this.actionError.set('Не удалось изменить сообщение'),
+      });
   }
 
   protected requestDeleteMessage(message: Message): void {
@@ -519,39 +447,41 @@ export class ChatWindow {
   }
 
   protected requestForward(message: Message): void {
-    this.forwardRequested.emit({
-      message,
-      authorName: this.authorName(message),
-    });
+    this.forwardRequested.emit(message);
   }
 
   protected confirmDeleteMessage(): void {
+    const chat = this.chat();
     const message = this.messageToDelete();
 
-    if (!message) {
+    if (!chat || !message) {
       return;
     }
 
     const wasLast = this.isLastMessage(message);
-    const messages = this.messages().filter((item) => item.id !== message.id);
 
-    this.updateCurrentMessages(messages);
-    this.messageToDelete.set(null);
-    this.isDeleteMessageOpen.set(false);
+    this.messagesApi
+      .deleteMessage(chat.id, message.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (deleted) => {
+          if (!deleted) {
+            return;
+          }
 
-    if (wasLast) {
-      this.emitLastMessagePreview();
-    }
-  }
+          this.actionError.set(null);
+          this.updateCurrentMessages(
+            this.messages().filter((item) => item.id !== message.id),
+          );
+          this.messageToDelete.set(null);
+          this.isDeleteMessageOpen.set(false);
 
-  protected replyText(message: Message): string {
-    if (message.replyTo) {
-      return message.replyTo.text;
-    }
-
-    const repliedMessage = this.repliedMessage(message);
-
-    return repliedMessage ? this.messageText(repliedMessage) : 'Сообщение удалено';
+          if (wasLast) {
+            this.emitLastMessagePreview();
+          }
+        },
+        error: () => this.actionError.set('Не удалось удалить сообщение'),
+      });
   }
 
   protected messageText(message: Message): string {
@@ -560,46 +490,6 @@ export class ChatWindow {
       message.attachments?.[0]?.name ||
       (message.attachments?.length ? 'Вложение' : '')
     );
-  }
-
-  protected messageTextParts(text: string): MessageTextPart[] {
-    const parts: MessageTextPart[] = [];
-    const linkPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
-    let lastIndex = 0;
-
-    for (const match of text.matchAll(linkPattern)) {
-      const matchedText = match[0];
-      const index = match.index ?? 0;
-      const trailing = matchedText.match(/[.,!?;:)\]}'"»]+$/)?.[0] ?? '';
-      const linkText = trailing
-        ? matchedText.slice(0, -trailing.length)
-        : matchedText;
-
-      if (index > lastIndex) {
-        parts.push({ text: text.slice(lastIndex, index) });
-      }
-
-      if (linkText) {
-        parts.push({
-          text: linkText,
-          href: /^https?:\/\//i.test(linkText)
-            ? linkText
-            : `https://${linkText}`,
-        });
-      }
-
-      if (trailing) {
-        parts.push({ text: trailing });
-      }
-
-      lastIndex = index + matchedText.length;
-    }
-
-    if (lastIndex < text.length) {
-      parts.push({ text: text.slice(lastIndex) });
-    }
-
-    return parts;
   }
 
   protected toggleMessageSearch(): void {
@@ -611,24 +501,12 @@ export class ChatWindow {
     this.searchScrollTop =
       this.messagesContainer()?.nativeElement.scrollTop ?? 0;
     this.isMessageSearchOpen.set(true);
-    this.messageSearchQuery.set('');
-    this.messageSearchResults.set([]);
-    this.messageSearchSource.set(null);
-    this.hasMessageSearchRun.set(false);
-    this.isMessageSearchLoading.set(false);
-
-    queueMicrotask(() => this.messageSearchInput()?.nativeElement.focus());
   }
 
   protected closeMessageSearch(restoreScroll = true): void {
     const wasOpen = this.isMessageSearchOpen();
 
     this.isMessageSearchOpen.set(false);
-    this.messageSearchQuery.set('');
-    this.messageSearchResults.set([]);
-    this.messageSearchSource.set(null);
-    this.hasMessageSearchRun.set(false);
-    this.isMessageSearchLoading.set(false);
 
     if (wasOpen && restoreScroll) {
       setTimeout(() => {
@@ -641,14 +519,7 @@ export class ChatWindow {
     }
   }
 
-  protected onMessageSearchInput(event: Event): void {
-    const query = (event.target as HTMLInputElement).value;
-
-    this.messageSearchQuery.set(query);
-    this.searchQuery$.next(query);
-  }
-
-  protected onMessageSearchResult(message: Message): void {
+  protected onMessageSearchSelected(message: Message): void {
     this.jumpToMessageById(message.id);
   }
 
@@ -685,40 +556,14 @@ export class ChatWindow {
           }
 
           this.scrollMode.set('preserve');
-          this.messages.set(state.messages);
           this.hasMoreBefore.set(state.hasMoreBefore);
         },
         error: () => {
           this.isLoadingOlder.set(false);
           this.scrollMode.set('none');
+          this.actionError.set('Не удалось загрузить старые сообщения');
         },
       });
-  }
-
-  private matchesSearch(message: Message, query: string): boolean {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
-
-    if (!normalizedQuery) {
-      return false;
-    }
-
-    const attachmentNames = (message.attachments ?? [])
-      .map((attachment) => attachment.name)
-      .join(' ');
-
-    return `${message.text} ${attachmentNames}`
-      .toLocaleLowerCase()
-      .includes(normalizedQuery);
-  }
-
-  protected replyAuthorName(message: Message): string {
-    if (message.replyTo) {
-      return message.replyTo.authorName;
-    }
-
-    const repliedMessage = this.repliedMessage(message);
-
-    return repliedMessage ? this.authorName(repliedMessage) : 'Сообщение';
   }
 
   protected jumpToMessage(message: Message): void {
@@ -741,7 +586,6 @@ export class ChatWindow {
         }
 
         this.scrollMode.set('none');
-        this.messages.set(this.messagesStore.getLoadedMessages(chat.id));
         this.hasMoreBefore.set(
           this.messagesStore.getPagination(chat.id).hasMoreBefore,
         );
@@ -765,17 +609,8 @@ export class ChatWindow {
       });
   }
 
-  private buildReplySnapshot(message: Message | null): MessageReply | null {
-    if (!message) {
-      return null;
-    }
-
-    return {
-      messageId: message.id,
-      authorId: message.authorId,
-      authorName: this.authorName(message),
-      text: this.messageText(message),
-    };
+  protected replyTarget(message: Message): Message | null {
+    return this.repliedMessage(message);
   }
 
   private replyTargetId(message: Message): string | null {
@@ -799,8 +634,6 @@ export class ChatWindow {
   }
 
   private updateCurrentMessages(messages: Message[]): void {
-    this.messages.set(messages);
-
     const chatId = this.chat()?.id;
 
     if (chatId) {
@@ -897,10 +730,6 @@ export class ChatWindow {
   protected cancelGroupRename(): void {
     this.isGroupEditing.set(false);
     this.groupTitleDraft.set('');
-  }
-
-  protected onGroupTitleInput(event: Event): void {
-    this.groupTitleDraft.set((event.target as HTMLInputElement).value);
   }
 
   protected renameGroup(): void {
@@ -1015,24 +844,6 @@ export class ChatWindow {
         this.groupMembers.set(members);
         this.isGroupLoading.set(false);
       });
-  }
-
-  protected memberInitials(member: User): string {
-    return this.getInitials(member.displayName);
-  }
-
-  protected memberName(member: User): string {
-    let name = member.displayName;
-
-    if (member.id === this.currentUserId()) {
-      name += ' (Вы)';
-    }
-
-    if (member.id === this.chat()?.ownerId) {
-      name += ' (Администратор группы)';
-    }
-
-    return name;
   }
 
   protected requestDirectChat(member: User): void {
