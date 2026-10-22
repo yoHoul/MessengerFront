@@ -18,27 +18,53 @@
 
         <label class="field">
             <span>Пароль</span>
-            <input
-                pInputText
-                fluid
-                type="password"
-                [autocomplete]="isRegistering() ? 'new-password' : 'current-password'"
-                [value]="password()"
-                (input)="onPasswordInput($event)"
-            />
+            <div class="password-field">
+                <input
+                    pInputText
+                    fluid
+                    [type]="showPassword() ? 'text' : 'password'"
+                    [autocomplete]="isRegistering() ? 'new-password' : 'current-password'"
+                    [value]="password()"
+                    (input)="onPasswordInput($event)"
+                />
+                <button
+                    type="button"
+                    class="password-field__toggle"
+                    [attr.aria-label]="showPassword() ? 'Скрыть пароль' : 'Показать пароль'"
+                    (click)="showPassword.set(!showPassword())"
+                >
+                    <i
+                        [class]="showPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+            </div>
         </label>
 
         @if (isRegistering()) {
             <label class="field">
                 <span>Подтвердите пароль</span>
-                <input
-                    pInputText
-                    fluid
-                    type="password"
-                    autocomplete="new-password"
-                    [value]="confirmPassword()"
-                    (input)="onConfirmPasswordInput($event)"
-                />
+                <div class="password-field">
+                    <input
+                        pInputText
+                        fluid
+                        [type]="showConfirmPassword() ? 'text' : 'password'"
+                        autocomplete="new-password"
+                        [value]="confirmPassword()"
+                        (input)="onConfirmPasswordInput($event)"
+                    />
+                    <button
+                        type="button"
+                        class="password-field__toggle"
+                        [attr.aria-label]="showConfirmPassword() ? 'Скрыть пароль' : 'Показать пароль'"
+                        (click)="showConfirmPassword.set(!showConfirmPassword())"
+                    >
+                        <i
+                            [class]="showConfirmPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                            aria-hidden="true"
+                        ></i>
+                    </button>
+                </div>
             </label>
         }
 

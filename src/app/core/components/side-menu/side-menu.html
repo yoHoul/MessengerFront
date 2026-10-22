@@ -109,38 +109,77 @@
 
         <label class="field">
             <span>Старый пароль</span>
-            <input
-                pInputText
-                fluid
-                type="password"
-                autocomplete="current-password"
-                [value]="oldPassword()"
-                (input)="onOldPasswordInput($event)"
-            />
+            <div class="password-field">
+                <input
+                    pInputText
+                    fluid
+                    [type]="showOldPassword() ? 'text' : 'password'"
+                    autocomplete="current-password"
+                    [value]="oldPassword()"
+                    (input)="onOldPasswordInput($event)"
+                />
+                <button
+                    type="button"
+                    class="password-field__toggle"
+                    [attr.aria-label]="showOldPassword() ? 'Скрыть пароль' : 'Показать пароль'"
+                    (click)="showOldPassword.set(!showOldPassword())"
+                >
+                    <i
+                        [class]="showOldPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+            </div>
         </label>
 
         <label class="field">
             <span>Новый пароль</span>
-            <input
-                pInputText
-                fluid
-                type="password"
-                autocomplete="new-password"
-                [value]="newPassword()"
-                (input)="onNewPasswordInput($event)"
-            />
+            <div class="password-field">
+                <input
+                    pInputText
+                    fluid
+                    [type]="showNewPassword() ? 'text' : 'password'"
+                    autocomplete="new-password"
+                    [value]="newPassword()"
+                    (input)="onNewPasswordInput($event)"
+                />
+                <button
+                    type="button"
+                    class="password-field__toggle"
+                    [attr.aria-label]="showNewPassword() ? 'Скрыть пароль' : 'Показать пароль'"
+                    (click)="showNewPassword.set(!showNewPassword())"
+                >
+                    <i
+                        [class]="showNewPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+            </div>
         </label>
 
         <label class="field">
             <span>Подтвердите новый пароль</span>
-            <input
-                pInputText
-                fluid
-                type="password"
-                autocomplete="new-password"
-                [value]="confirmPassword()"
-                (input)="onConfirmPasswordInput($event)"
-            />
+            <div class="password-field">
+                <input
+                    pInputText
+                    fluid
+                    [type]="showConfirmPassword() ? 'text' : 'password'"
+                    autocomplete="new-password"
+                    [value]="confirmPassword()"
+                    (input)="onConfirmPasswordInput($event)"
+                />
+                <button
+                    type="button"
+                    class="password-field__toggle"
+                    [attr.aria-label]="showConfirmPassword() ? 'Скрыть пароль' : 'Показать пароль'"
+                    (click)="showConfirmPassword.set(!showConfirmPassword())"
+                >
+                    <i
+                        [class]="showConfirmPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+            </div>
         </label>
 
         @if (passwordError()) {
