@@ -133,3 +133,13 @@
 .composer-reply + .composer {
     border-top: 0;
 }
+
+@media (max-width: 768px) {
+    .composer__attach {
+        display: none;
+    }
+
+    .composer {
+        padding: 10px 12px;
+    }
+}

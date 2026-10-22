@@ -1,6 +1,15 @@
 <div class="container">
     @if (chat(); as currentChat) {
         <div class="header">
+            <button
+                type="button"
+                class="header__back"
+                aria-label="Назад к списку чатов"
+                (click)="backRequested.emit()"
+            >
+                <i class="pi pi-arrow-left" aria-hidden="true"></i>
+            </button>
+
             @if (isGroup()) {
                 <button
                     type="button"

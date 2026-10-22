@@ -6,11 +6,20 @@ import { ChatPreview } from '../type/chat-preview';
 @Injectable({ providedIn: 'root' })
 export class ChatsStoreService {
   private readonly chatsState = signal<ChatListItem[]>([]);
+  private readonly loadedForUser = signal<string | null>(null);
 
   readonly chats = this.chatsState.asReadonly();
 
-  setChats(chats: ChatListItem[]): void {
+  isLoadedFor(userId: string | null): boolean {
+    return userId !== null && this.loadedForUser() === userId;
+  }
+
+  setChats(chats: ChatListItem[], userId?: string | null): void {
     this.chatsState.set(chats.map((chat) => ({ ...chat })));
+
+    if (userId) {
+      this.loadedForUser.set(userId);
+    }
   }
 
   addChat(chat: ChatListItem): void {

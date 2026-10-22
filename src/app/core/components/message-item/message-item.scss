@@ -278,3 +278,9 @@
 .attachment-file__download:hover {
     background: rgba(128, 128, 128, 0.25);
 }
+
+@media (max-width: 768px) {
+    .message--mine .message__content {
+        max-width: 64%;
+    }
+}

@@ -1,6 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
 import { BarsIcon } from '@openng/optimus-ui/icons/bars';
 
 import { ChatMenu } from '../../core/components/chat-menu/chat-menu';
@@ -42,8 +41,7 @@ export class MainPage {
   private readonly groupInfoApi = inject(GroupInfoApiService);
   private readonly messagesApi = inject(MessagesApiService);
   private readonly messagesStore = inject(MessagesStoreService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly chats = this.chatsStore.chats;
   protected readonly isMenuOpen = signal(false);
@@ -71,36 +69,16 @@ export class MainPage {
   });
 
   constructor() {
-    this.route.paramMap
-      .pipe(takeUntilDestroyed())
-      .subscribe((params) => {
-        const chatId = params.get('chatId');
-        this.selectedChatId.set(chatId);
+    const userId = this.currentUser.currentUserId();
 
-        if (chatId) {
-          this.chatsStore.clearUnread(chatId);
-        }
-      });
+    if (!userId || this.chatsStore.isLoadedFor(userId)) {
+      return;
+    }
 
     this.chatsApi
       .getChats()
-      .pipe(takeUntilDestroyed())
-      .subscribe((chats) => {
-        this.chatsStore.setChats(chats);
-
-        const selectedChatId = this.selectedChatId();
-
-        if (selectedChatId) {
-          this.chatsStore.clearUnread(selectedChatId);
-        }
-
-        if (
-          selectedChatId &&
-          !chats.some((chat) => chat.id === selectedChatId)
-        ) {
-          void this.router.navigateByUrl('/chats');
-        }
-      });
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((chats) => this.chatsStore.setChats(chats, userId));
   }
 
   protected openMenu(): void {
@@ -118,7 +96,10 @@ export class MainPage {
   protected selectChat(chatId: string): void {
     this.selectedChatId.set(chatId);
     this.chatsStore.clearUnread(chatId);
-    void this.router.navigate(['/chats', chatId]);
+  }
+
+  protected onBackToChatList(): void {
+    this.selectedChatId.set(null);
   }
 
   protected onSearchChatSelected(chatId: string): void {
@@ -144,7 +125,7 @@ export class MainPage {
 
     this.chatsApi
       .createGroupChat(title, currentUser.id)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((chat) => {
         this.chatsStore.addChat(chat);
 
@@ -160,7 +141,7 @@ export class MainPage {
   protected onGroupRenamed(request: GroupRenameRequest): void {
     this.chatsApi
       .renameChat(request.chatId, request.title)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() =>
         this.chatsStore.updateChat(request.chatId, { title: request.title }),
       );
@@ -169,13 +150,12 @@ export class MainPage {
   protected onGroupDeleted(chatId: string): void {
     this.chatsApi
       .deleteChat(chatId)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.chatsStore.removeChat(chatId);
 
         if (this.selectedChatId() === chatId) {
           this.selectedChatId.set(null);
-          void this.router.navigateByUrl('/chats');
         }
 
         this.query.set('');
@@ -200,7 +180,7 @@ export class MainPage {
 
     this.messagesApi
       .forwardMessage(message.chatId, message.id, targetChatId)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((forwarded) => {
         if (!forwarded) {
           return;
@@ -244,7 +224,7 @@ export class MainPage {
 
     this.chatsApi
       .createDirectChat(user)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((chat) => {
         this.chatsStore.addChat(chat);
         this.selectChat(chat.id);

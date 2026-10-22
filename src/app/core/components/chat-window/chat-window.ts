@@ -80,6 +80,7 @@ export class ChatWindow {
   readonly directChatRequested = output<User>();
   readonly groupRenamed = output<GroupRenameRequest>();
   readonly groupDeleted = output<string>();
+  readonly backRequested = output<void>();
 
   protected readonly messages = computed(() => {
     const chatId = this.chat()?.id;

@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { ButtonModule } from '@openng/optimus-ui/button';
 import { InputText } from '@openng/optimus-ui/inputtext';
 
@@ -14,7 +14,6 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class LoginPage {
   private readonly auth = inject(AuthService);
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   protected readonly mode = signal<'login' | 'register'>('login');
@@ -49,13 +48,7 @@ export class LoginPage {
   }
 
   private redirectAfterAuth(): void {
-    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-    const target =
-      returnUrl?.startsWith('/') && !returnUrl.startsWith('//')
-        ? returnUrl
-        : '/chats';
-
-    void this.router.navigateByUrl(target);
+    void this.router.navigateByUrl('/');
   }
 
   protected submit(event?: Event): void {
