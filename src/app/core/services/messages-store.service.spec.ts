@@ -24,6 +24,8 @@ function page(ids: string[], hasMoreBefore = false): MessagePage {
     messages,
     hasMoreBefore,
     nextBefore: messages[0]?.id ?? null,
+    hasMoreAfter: false,
+    nextAfter: messages[messages.length - 1]?.id ?? null,
   };
 }
 
@@ -73,5 +75,32 @@ describe('MessagesStoreService', () => {
     expect(
       service.getLoadedMessages('1').filter((item) => item.id === '3'),
     ).toHaveLength(1);
+  });
+
+  it('loads newer messages in a window', () => {
+    const api = TestBed.inject(MessagesApiService) as unknown as {
+      getMessages: ReturnType<typeof vi.fn>;
+    };
+
+    api.getMessages.mockImplementation(
+      (_chatId: string, options: { after?: string | null }) =>
+        options.after
+          ? of(page(['5', '6']))
+          : of({
+              ...page(['3', '4'], true),
+              hasMoreAfter: true,
+              nextAfter: '4',
+            }),
+    );
+
+    service.getInitialPage('1').subscribe();
+    service.loadNewer('1').subscribe((state) => {
+      expect(state?.messages.map((item) => item.id)).toEqual([
+        '3',
+        '4',
+        '5',
+        '6',
+      ]);
+    });
   });
 });

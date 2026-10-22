@@ -13,7 +13,7 @@ export class DirectoryStoreService {
 
   constructor() {
     this.userProfileApi
-      .getUsers()
+      .watchUsers()
       .pipe(takeUntilDestroyed())
       .subscribe((users) =>
         this.usersState.set(

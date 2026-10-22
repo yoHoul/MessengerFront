@@ -95,7 +95,9 @@ export class ChatWindow {
   protected readonly pendingAttachments = signal<MessageAttachment[]>([]);
   protected readonly selectedImage = signal<MessageAttachment | null>(null);
   protected readonly hasMoreBefore = signal(false);
+  protected readonly hasMoreAfter = signal(false);
   protected readonly isLoadingOlder = signal(false);
+  protected readonly isLoadingNewer = signal(false);
   protected readonly isSending = signal(false);
   protected readonly isUploadingAttachments = signal(false);
   protected readonly messagesError = signal<string | null>(null);
@@ -163,7 +165,9 @@ export class ChatWindow {
       .pipe(
         switchMap((chatId) => {
           this.hasMoreBefore.set(false);
+          this.hasMoreAfter.set(false);
           this.isLoadingOlder.set(false);
+          this.isLoadingNewer.set(false);
           this.scrollMode.set('bottom');
           this.closeMessageSearch(false);
           this.clearPendingAttachments();
@@ -180,7 +184,10 @@ export class ChatWindow {
               messages: [],
               hasMoreBefore: false,
               nextBefore: null,
+              hasMoreAfter: false,
+              nextAfter: null,
               loadingOlder: false,
+              loadingNewer: false,
             });
           }
 
@@ -191,7 +198,10 @@ export class ChatWindow {
                 messages: [],
                 hasMoreBefore: false,
                 nextBefore: null,
+                hasMoreAfter: false,
+                nextAfter: null,
                 loadingOlder: false,
+                loadingNewer: false,
               });
             }),
           );
@@ -201,7 +211,9 @@ export class ChatWindow {
       .subscribe((state) => {
         this.scrollMode.set('bottom');
         this.hasMoreBefore.set(state.hasMoreBefore);
+        this.hasMoreAfter.set(state.hasMoreAfter);
         this.isLoadingOlder.set(false);
+        this.isLoadingNewer.set(false);
         this.messagesError.set(null);
       });
 
@@ -537,9 +549,13 @@ export class ChatWindow {
 
   protected onMessagesScroll(event: Event): void {
     const element = event.target as HTMLElement;
+    const atBottom =
+      element.scrollHeight - element.scrollTop - element.clientHeight <= 80;
 
     if (element.scrollTop <= 80) {
       this.loadOlder();
+    } else if (atBottom) {
+      this.loadNewer();
     }
   }
 
@@ -569,11 +585,43 @@ export class ChatWindow {
 
           this.scrollMode.set('preserve');
           this.hasMoreBefore.set(state.hasMoreBefore);
+          this.hasMoreAfter.set(state.hasMoreAfter);
         },
         error: () => {
           this.isLoadingOlder.set(false);
           this.scrollMode.set('none');
           this.actionError.set('Не удалось загрузить старые сообщения');
+        },
+      });
+  }
+
+  protected loadNewer(): void {
+    const chat = this.chat();
+
+    if (!chat || this.isLoadingNewer() || !this.hasMoreAfter()) {
+      return;
+    }
+
+    this.isLoadingNewer.set(true);
+
+    this.messagesStore
+      .loadNewer(chat.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (state) => {
+          this.isLoadingNewer.set(false);
+
+          if (!state) {
+            return;
+          }
+
+          this.scrollMode.set('bottom');
+          this.hasMoreAfter.set(state.hasMoreAfter);
+          this.hasMoreBefore.set(state.hasMoreBefore);
+        },
+        error: () => {
+          this.isLoadingNewer.set(false);
+          this.actionError.set('Не удалось загрузить новые сообщения');
         },
       });
   }
@@ -598,10 +646,11 @@ export class ChatWindow {
         }
 
         this.scrollMode.set('none');
-        this.hasMoreBefore.set(
-          this.messagesStore.getPagination(chat.id).hasMoreBefore,
-        );
+        const pagination = this.messagesStore.getPagination(chat.id);
+        this.hasMoreBefore.set(pagination.hasMoreBefore);
+        this.hasMoreAfter.set(pagination.hasMoreAfter);
         this.isLoadingOlder.set(false);
+        this.isLoadingNewer.set(false);
         this.closeMessageSearch(false);
 
         if (this.targetScrollTimer) {
@@ -799,7 +848,7 @@ export class ChatWindow {
     this.isAddMembersOpen.set(true);
 
     this.userProfileApi
-      .getUsers()
+      .getUsersOnce()
       .pipe(
         catchError(() => of<User[]>([])),
         takeUntilDestroyed(this.destroyRef),

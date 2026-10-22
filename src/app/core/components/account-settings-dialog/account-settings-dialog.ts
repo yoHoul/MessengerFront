@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { ButtonModule } from '@openng/optimus-ui/button';
 import { DialogModule } from '@openng/optimus-ui/dialog';
 import { InputText } from '@openng/optimus-ui/inputtext';
@@ -36,6 +36,7 @@ export class AccountSettingsDialog {
   protected readonly passwordError = signal('');
   protected readonly passwordSuccess = signal('');
   protected readonly isPasswordSaving = signal(false);
+  private wasVisible = false;
 
   protected readonly canSaveProfile = computed(() => {
     const user = this.user();
@@ -63,9 +64,13 @@ export class AccountSettingsDialog {
 
   constructor() {
     effect(() => {
-      if (this.visible()) {
-        this.resetForm();
+      const visible = this.visible();
+
+      if (visible && !this.wasVisible) {
+        untracked(() => this.resetForm());
       }
+
+      this.wasVisible = visible;
     });
   }
 

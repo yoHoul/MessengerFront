@@ -25,7 +25,7 @@ export class MessagesStoreService {
   getInitialPage(chatId: string): Observable<ChatMessagesState> {
     const cached = this.states().get(chatId);
 
-    if (cached) {
+    if (cached && !cached.hasMoreAfter) {
       return of(this.snapshot(cached));
     }
 
@@ -34,6 +34,7 @@ export class MessagesStoreService {
         const state: ChatMessagesState = {
           ...page,
           loadingOlder: false,
+          loadingNewer: false,
         };
 
         this.commit(chatId, state);
@@ -96,6 +97,60 @@ export class MessagesStoreService {
       );
   }
 
+  loadNewer(chatId: string): Observable<ChatMessagesState | null> {
+    const current = this.states().get(chatId);
+
+    if (!current || !current.hasMoreAfter || current.loadingNewer) {
+      return of(null);
+    }
+
+    this.commit(chatId, { ...current, loadingNewer: true });
+
+    return this.messagesApi
+      .getMessages(chatId, {
+        after: current.nextAfter,
+        limit: PAGE_SIZE,
+      })
+      .pipe(
+        map((page) => {
+          const latest = this.states().get(chatId) ?? current;
+          const loadedIds = new Set(
+            latest.messages.map((message) => message.id),
+          );
+          const newer = page.messages.filter(
+            (message) => !loadedIds.has(message.id),
+          );
+
+          const state: ChatMessagesState = {
+            ...latest,
+            messages: [...latest.messages, ...newer],
+            hasMoreAfter: page.hasMoreAfter,
+            nextAfter: page.nextAfter,
+            loadingNewer: false,
+          };
+
+          this.commit(chatId, state);
+          return this.snapshot(state);
+        }),
+        catchError((error) => {
+          const latest = this.states().get(chatId);
+
+          if (latest) {
+            this.commit(chatId, { ...latest, loadingNewer: false });
+          }
+
+          return throwError(() => error);
+        }),
+        finalize(() => {
+          const latest = this.states().get(chatId);
+
+          if (latest?.loadingNewer) {
+            this.commit(chatId, { ...latest, loadingNewer: false });
+          }
+        }),
+      );
+  }
+
   getLoadedMessages(chatId: string): Message[] {
     return [...(this.states().get(chatId)?.messages ?? [])];
   }
@@ -103,12 +158,16 @@ export class MessagesStoreService {
   getPagination(chatId: string): {
     hasMoreBefore: boolean;
     nextBefore: string | null;
+    hasMoreAfter: boolean;
+    nextAfter: string | null;
   } {
     const state = this.states().get(chatId);
 
     return {
       hasMoreBefore: state?.hasMoreBefore ?? false,
       nextBefore: state?.nextBefore ?? null,
+      hasMoreAfter: state?.hasMoreAfter ?? false,
+      nextAfter: state?.nextAfter ?? null,
     };
   }
 
@@ -119,7 +178,10 @@ export class MessagesStoreService {
       messages: [...messages],
       hasMoreBefore: state?.hasMoreBefore ?? false,
       nextBefore: state?.nextBefore ?? null,
+      hasMoreAfter: state?.hasMoreAfter ?? false,
+      nextAfter: state?.nextAfter ?? null,
       loadingOlder: state?.loadingOlder ?? false,
+      loadingNewer: state?.loadingNewer ?? false,
     });
   }
 
@@ -131,6 +193,10 @@ export class MessagesStoreService {
         this.commit(chatId, {
           ...state,
           messages: [...state.messages, message],
+          hasMoreAfter: state.hasMoreAfter,
+          nextAfter: state.hasMoreAfter
+            ? state.nextAfter
+            : message.id,
         });
       }
 
@@ -146,7 +212,10 @@ export class MessagesStoreService {
         this.commit(chatId, {
           ...page,
           messages,
+          hasMoreAfter: page.hasMoreAfter,
+          nextAfter: page.hasMoreAfter ? page.nextAfter : message.id,
           loadingOlder: false,
+          loadingNewer: false,
         });
       }),
       map(() => undefined),
@@ -167,30 +236,14 @@ export class MessagesStoreService {
 
     return this.messagesApi.getMessageContext(chatId, messageId).pipe(
       map((page) => {
-        const existing = this.states().get(chatId);
-        const merged = new Map<string, Message>();
-
-        for (const message of existing?.messages ?? []) {
-          merged.set(message.id, message);
-        }
-
-        for (const message of page.messages) {
-          merged.set(message.id, message);
-        }
-
-        const messages = [...merged.values()].sort((a, b) =>
-          a.createdAt.localeCompare(b.createdAt),
-        );
         const state: ChatMessagesState = {
-          messages,
-          hasMoreBefore:
-            page.hasMoreBefore || (existing?.hasMoreBefore ?? false),
-          nextBefore: messages[0]?.id ?? null,
-          loadingOlder: existing?.loadingOlder ?? false,
+          ...page,
+          loadingOlder: false,
+          loadingNewer: false,
         };
 
         this.commit(chatId, state);
-        return messages.find((message) => message.id === messageId) ?? null;
+        return state.messages.find((message) => message.id === messageId) ?? null;
       }),
     );
   }

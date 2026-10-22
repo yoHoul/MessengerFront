@@ -19,12 +19,12 @@ export class UserProfileApiService {
   );
 
   getProfile(userId: string): Observable<User | null> {
-    return this.getUsers().pipe(
+    return this.getUsersOnce().pipe(
       map((users) => users.find((user) => user.id === userId) ?? null),
     );
   }
 
-  getUsers(): Observable<User[]> {
+  watchUsers(): Observable<User[]> {
     return combineLatest([this.usersRequest, this.extraUsers]).pipe(
       map(([users, extraUsers]) => {
         const merged = new Map(users.map((user) => [user.id, user]));
@@ -39,7 +39,7 @@ export class UserProfileApiService {
   }
 
   getUsersOnce(): Observable<User[]> {
-    return this.getUsers().pipe(take(1));
+    return this.watchUsers().pipe(take(1));
   }
 
   upsertUser(user: User): void {

@@ -122,7 +122,7 @@ export class SideMenu {
     this.isCreateGroupOpen.set(true);
 
     this.userProfileApi
-      .getUsers()
+      .getUsersOnce()
       .pipe(
         catchError(() => of<User[]>([])),
         takeUntilDestroyed(this.destroyRef),
