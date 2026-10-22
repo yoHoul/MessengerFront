@@ -17,6 +17,7 @@ import { catchError, of, switchMap } from 'rxjs';
 
 import { CurrentUserService } from '../../services/current-user.service';
 import { AttachmentsApiService } from '../../services/attachments-api.service';
+import { DirectoryStoreService } from '../../services/directory-store.service';
 import { DraftsService } from '../../services/drafts.service';
 import { GroupInfoApiService } from '../../services/group-info-api.service';
 import { MessagesApiService } from '../../services/messages-api.service';
@@ -57,6 +58,7 @@ export class ChatWindow {
   private readonly currentUser = inject(CurrentUserService);
   private readonly document = inject(DOCUMENT);
   private readonly attachmentsApi = inject(AttachmentsApiService);
+  private readonly directory = inject(DirectoryStoreService);
   private readonly drafts = inject(DraftsService);
   private readonly userProfileApi = inject(UserProfileApiService);
   private readonly groupInfoApi = inject(GroupInfoApiService);
@@ -68,6 +70,9 @@ export class ChatWindow {
     viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
 
   private highlightTimer: ReturnType<typeof setTimeout> | null = null;
+  private scrollTimer: ReturnType<typeof setTimeout> | null = null;
+  private targetScrollTimer: ReturnType<typeof setTimeout> | null = null;
+  private restoreScrollTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly scrollMode = signal<ScrollMode>('bottom');
   private scrollAnchorHeight = 0;
   private scrollAnchorTop = 0;
@@ -90,7 +95,9 @@ export class ChatWindow {
   protected readonly pendingAttachments = signal<MessageAttachment[]>([]);
   protected readonly selectedImage = signal<MessageAttachment | null>(null);
   protected readonly hasMoreBefore = signal(false);
+  protected readonly hasMoreAfter = signal(false);
   protected readonly isLoadingOlder = signal(false);
+  protected readonly isLoadingNewer = signal(false);
   protected readonly isSending = signal(false);
   protected readonly isUploadingAttachments = signal(false);
   protected readonly messagesError = signal<string | null>(null);
@@ -105,10 +112,10 @@ export class ChatWindow {
   protected readonly highlightedMessageId = signal<string | null>(null);
   protected readonly isProfileOpen = signal(false);
   protected readonly profile = signal<User | null>(null);
-  protected readonly usersById = signal<ReadonlyMap<string, User>>(new Map());
   protected readonly isGroupOpen = signal(false);
   protected readonly isGroupLoading = signal(false);
   protected readonly groupMembers = signal<User[]>([]);
+  protected readonly groupMembersError = signal('');
   protected readonly currentUserId = this.currentUser.currentUserId;
   protected readonly isAddMembersOpen = signal(false);
   protected readonly isAddMembersLoading = signal(false);
@@ -149,25 +156,18 @@ export class ChatWindow {
   );
 
   private readonly chatId = computed(() => this.chat()?.id ?? null);
+  private readonly messagesById = computed(
+    () => new Map(this.messages().map((message) => [message.id, message])),
+  );
 
   constructor() {
-    this.userProfileApi
-      .getUsers()
-      .pipe(
-        catchError(() => of<User[]>([])),
-        takeUntilDestroyed(),
-      )
-      .subscribe((users) =>
-        this.usersById.set(
-          new Map(users.map((user) => [user.id, user] as const)),
-        ),
-      );
-
     toObservable(this.chatId)
       .pipe(
         switchMap((chatId) => {
           this.hasMoreBefore.set(false);
+          this.hasMoreAfter.set(false);
           this.isLoadingOlder.set(false);
+          this.isLoadingNewer.set(false);
           this.scrollMode.set('bottom');
           this.closeMessageSearch(false);
           this.clearPendingAttachments();
@@ -184,7 +184,10 @@ export class ChatWindow {
               messages: [],
               hasMoreBefore: false,
               nextBefore: null,
+              hasMoreAfter: false,
+              nextAfter: null,
               loadingOlder: false,
+              loadingNewer: false,
             });
           }
 
@@ -195,7 +198,10 @@ export class ChatWindow {
                 messages: [],
                 hasMoreBefore: false,
                 nextBefore: null,
+                hasMoreAfter: false,
+                nextAfter: null,
                 loadingOlder: false,
+                loadingNewer: false,
               });
             }),
           );
@@ -205,7 +211,9 @@ export class ChatWindow {
       .subscribe((state) => {
         this.scrollMode.set('bottom');
         this.hasMoreBefore.set(state.hasMoreBefore);
+        this.hasMoreAfter.set(state.hasMoreAfter);
         this.isLoadingOlder.set(false);
+        this.isLoadingNewer.set(false);
         this.messagesError.set(null);
       });
 
@@ -213,7 +221,12 @@ export class ChatWindow {
       this.messages();
       const mode = this.scrollMode();
 
-      setTimeout(() => {
+      if (this.scrollTimer) {
+        clearTimeout(this.scrollTimer);
+      }
+
+      this.scrollTimer = setTimeout(() => {
+        this.scrollTimer = null;
         const element = this.messagesContainer()?.nativeElement;
 
         if (!element) {
@@ -230,11 +243,19 @@ export class ChatWindow {
         }
 
         this.scrollMode.set('none');
-      }, 0);    });
+      }, 0);
+    });
 
     this.destroyRef.onDestroy(() => {
-      if (this.highlightTimer) {
-        clearTimeout(this.highlightTimer);
+      for (const timer of [
+        this.highlightTimer,
+        this.scrollTimer,
+        this.targetScrollTimer,
+        this.restoreScrollTimer,
+      ]) {
+        if (timer) {
+          clearTimeout(timer);
+        }
       }
     });
   }
@@ -248,7 +269,7 @@ export class ChatWindow {
       return this.currentUser.currentUser();
     }
 
-    return this.usersById().get(message.authorId) ?? null;
+    return this.directory.getUser(message.authorId);
   }
 
   protected authorName(message: Message): string {
@@ -355,17 +376,14 @@ export class ChatWindow {
   }
 
   protected removePendingAttachment(attachment: MessageAttachment): void {
-    URL.revokeObjectURL(attachment.url);
+    this.attachmentsApi.release([attachment]);
     this.pendingAttachments.update((items) =>
       items.filter((item) => item.id !== attachment.id),
     );
   }
 
   private clearPendingAttachments(): void {
-    for (const attachment of this.pendingAttachments()) {
-      URL.revokeObjectURL(attachment.url);
-    }
-
+    this.attachmentsApi.release(this.pendingAttachments());
     this.pendingAttachments.set([]);
   }
 
@@ -510,7 +528,12 @@ export class ChatWindow {
     this.isMessageSearchOpen.set(false);
 
     if (wasOpen && restoreScroll) {
-      setTimeout(() => {
+      if (this.restoreScrollTimer) {
+        clearTimeout(this.restoreScrollTimer);
+      }
+
+      this.restoreScrollTimer = setTimeout(() => {
+        this.restoreScrollTimer = null;
         const element = this.messagesContainer()?.nativeElement;
 
         if (element) {
@@ -526,9 +549,13 @@ export class ChatWindow {
 
   protected onMessagesScroll(event: Event): void {
     const element = event.target as HTMLElement;
+    const atBottom =
+      element.scrollHeight - element.scrollTop - element.clientHeight <= 80;
 
     if (element.scrollTop <= 80) {
       this.loadOlder();
+    } else if (atBottom) {
+      this.loadNewer();
     }
   }
 
@@ -558,11 +585,43 @@ export class ChatWindow {
 
           this.scrollMode.set('preserve');
           this.hasMoreBefore.set(state.hasMoreBefore);
+          this.hasMoreAfter.set(state.hasMoreAfter);
         },
         error: () => {
           this.isLoadingOlder.set(false);
           this.scrollMode.set('none');
           this.actionError.set('Не удалось загрузить старые сообщения');
+        },
+      });
+  }
+
+  protected loadNewer(): void {
+    const chat = this.chat();
+
+    if (!chat || this.isLoadingNewer() || !this.hasMoreAfter()) {
+      return;
+    }
+
+    this.isLoadingNewer.set(true);
+
+    this.messagesStore
+      .loadNewer(chat.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (state) => {
+          this.isLoadingNewer.set(false);
+
+          if (!state) {
+            return;
+          }
+
+          this.scrollMode.set('bottom');
+          this.hasMoreAfter.set(state.hasMoreAfter);
+          this.hasMoreBefore.set(state.hasMoreBefore);
+        },
+        error: () => {
+          this.isLoadingNewer.set(false);
+          this.actionError.set('Не удалось загрузить новые сообщения');
         },
       });
   }
@@ -587,13 +646,19 @@ export class ChatWindow {
         }
 
         this.scrollMode.set('none');
-        this.hasMoreBefore.set(
-          this.messagesStore.getPagination(chat.id).hasMoreBefore,
-        );
+        const pagination = this.messagesStore.getPagination(chat.id);
+        this.hasMoreBefore.set(pagination.hasMoreBefore);
+        this.hasMoreAfter.set(pagination.hasMoreAfter);
         this.isLoadingOlder.set(false);
+        this.isLoadingNewer.set(false);
         this.closeMessageSearch(false);
 
-        setTimeout(() => {
+        if (this.targetScrollTimer) {
+          clearTimeout(this.targetScrollTimer);
+        }
+
+        this.targetScrollTimer = setTimeout(() => {
+          this.targetScrollTimer = null;
           const element = this.document.getElementById(`message-${targetId}`);
           element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           this.highlightedMessageId.set(targetId);
@@ -625,7 +690,7 @@ export class ChatWindow {
       return null;
     }
 
-    return this.messages().find((item) => item.id === replyToId) ?? null;
+    return this.messagesById().get(replyToId) ?? null;
   }
 
   private isLastMessage(message: Message): boolean {
@@ -682,7 +747,7 @@ export class ChatWindow {
       return;
     }
 
-    const cachedProfile = this.usersById().get(userId);
+    const cachedProfile = this.directory.getUser(userId);
 
     if (cachedProfile) {
       this.profile.set(cachedProfile);
@@ -710,6 +775,7 @@ export class ChatWindow {
     }
 
     this.groupMembers.set([]);
+    this.groupMembersError.set('');
     this.isGroupLoading.set(true);
     this.isGroupOpen.set(true);
     this.isGroupEditing.set(false);
@@ -782,7 +848,7 @@ export class ChatWindow {
     this.isAddMembersOpen.set(true);
 
     this.userProfileApi
-      .getUsers()
+      .getUsersOnce()
       .pipe(
         catchError(() => of<User[]>([])),
         takeUntilDestroyed(this.destroyRef),
@@ -838,7 +904,10 @@ export class ChatWindow {
     this.groupInfoApi
       .getMembers(chatId)
       .pipe(
-        catchError(() => of<User[]>([])),
+        catchError(() => {
+          this.groupMembersError.set('Не удалось загрузить участников');
+          return of<User[]>([]);
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((members) => {

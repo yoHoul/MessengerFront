@@ -23,10 +23,9 @@ import {
 } from 'rxjs';
 
 import { CurrentUserService } from '../../services/current-user.service';
+import { DirectoryStoreService } from '../../services/directory-store.service';
 import { MessagesApiService } from '../../services/messages-api.service';
-import { UserProfileApiService } from '../../services/user-profile-api.service';
 import { Message } from '../../type/message';
-import { User } from '../../type/user';
 
 interface SearchOutcome {
   messages: Message[];
@@ -41,8 +40,8 @@ interface SearchOutcome {
 })
 export class MessageSearch implements OnInit {
   private readonly currentUser = inject(CurrentUserService);
+  private readonly directory = inject(DirectoryStoreService);
   private readonly messagesApi = inject(MessagesApiService);
-  private readonly userProfileApi = inject(UserProfileApiService);
 
   readonly messages = input<Message[]>([]);
   readonly chatId = input<string | null>(null);
@@ -55,7 +54,6 @@ export class MessageSearch implements OnInit {
   private readonly searchInput =
     viewChild<ElementRef<HTMLInputElement>>('searchInput');
   private readonly searchQuery$ = new Subject<string>();
-  private readonly usersById = signal<Map<string, User>>(new Map());
 
   protected readonly query = signal('');
   protected readonly results = signal<Message[]>([]);
@@ -64,15 +62,6 @@ export class MessageSearch implements OnInit {
   protected readonly isLoading = signal(false);
 
   constructor() {
-    this.userProfileApi
-      .getUsers()
-      .pipe(takeUntilDestroyed())
-      .subscribe((users) =>
-        this.usersById.set(
-          new Map(users.map((user) => [user.id, user] as const)),
-        ),
-      );
-
     this.searchQuery$
       .pipe(
         debounceTime(200),
@@ -138,7 +127,7 @@ export class MessageSearch implements OnInit {
     }
 
     return (
-      this.usersById().get(message.authorId)?.displayName ??
+      this.directory.getUser(message.authorId)?.displayName ??
       (this.isGroup() ? 'Пользователь' : this.chatTitle())
     );
   }

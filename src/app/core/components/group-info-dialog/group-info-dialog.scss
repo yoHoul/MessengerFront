@@ -67,6 +67,12 @@
     opacity: 0.6;
 }
 
+.group-info__error {
+    margin: 0;
+    color: #e5484d;
+    font-size: 12px;
+}
+
 .group-info__members {
     display: flex;
     flex-direction: column;

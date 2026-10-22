@@ -19,7 +19,7 @@ export class SearchUsersApiService {
 
     const currentUserId = this.currentUser.currentUserId();
 
-    return this.userProfileApi.getUsers().pipe(
+    return this.userProfileApi.getUsersOnce().pipe(
       map((users) =>
         users.filter(
           (user) =>

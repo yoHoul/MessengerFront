@@ -102,8 +102,20 @@
                             (jumpReply)="jumpToMessage($event)"
                         ></app-message-item>
                     }
-            }
-        </div>
+                }
+
+                @if (isLoadingNewer()) {
+                    <p class="messages__loading">Загружаем новые сообщения…</p>
+                } @else if (hasMoreAfter()) {
+                    <button
+                        type="button"
+                        class="messages__load-older"
+                        (click)="loadNewer()"
+                    >
+                        Загрузить новые
+                    </button>
+                }
+            </div>
         }
 
         @if (actionError()) {
@@ -142,6 +154,7 @@
     [visible]="isGroupOpen()"
     [title]="chat()?.title ?? ''"
     [members]="groupMembers()"
+    [error]="groupMembersError()"
     [owner]="isGroupOwner()"
     [loading]="isGroupLoading()"
     [editing]="isGroupEditing()"

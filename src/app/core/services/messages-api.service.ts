@@ -6,6 +6,7 @@ import { Message, MessageReply } from '../type/message';
 import { MessagePage } from '../type/message-page';
 import { SendMessageInput } from '../type/send-message-input';
 import { CurrentUserService } from './current-user.service';
+import { AttachmentsApiService } from './attachments-api.service';
 import { MockIdService } from './mock-id.service';
 import { UserProfileApiService } from './user-profile-api.service';
 
@@ -16,6 +17,7 @@ const CONTEXT_RADIUS = 10;
 export class MessagesApiService {
   private readonly http = inject(HttpClient);
   private readonly currentUser = inject(CurrentUserService);
+  private readonly attachmentsApi = inject(AttachmentsApiService);
   private readonly ids = inject(MockIdService);
   private readonly userProfileApi = inject(UserProfileApiService);
 
@@ -23,32 +25,60 @@ export class MessagesApiService {
 
   getMessages(
     chatId: string,
-    options: { before?: string | null; limit?: number } = {},
+    options: { before?: string | null; after?: string | null; limit?: number } = {},
   ): Observable<MessagePage> {
     const limit = options.limit ?? PAGE_SIZE;
     const before = options.before ?? null;
+    const after = options.after ?? null;
 
     return this.getAll(chatId).pipe(
       map((messages) => {
-        const end = before
-          ? messages.findIndex((message) => message.id === before)
-          : messages.length;
+        let start: number;
+        let end: number;
 
-        if (end < 0) {
-          return {
-            messages: [],
-            hasMoreBefore: false,
-            nextBefore: null,
-          };
+        if (before) {
+          end = messages.findIndex((message) => message.id === before);
+          start = Math.max(0, end - limit);
+
+          if (end < 0) {
+            return {
+              messages: [],
+              hasMoreBefore: false,
+              nextBefore: null,
+              hasMoreAfter: false,
+              nextAfter: null,
+            };
+          }
+        } else if (after) {
+          const cursorIndex = messages.findIndex(
+            (message) => message.id === after,
+          );
+
+          if (cursorIndex < 0) {
+            return {
+              messages: [],
+              hasMoreBefore: false,
+              nextBefore: null,
+              hasMoreAfter: false,
+              nextAfter: null,
+            };
+          }
+
+          start = cursorIndex + 1;
+          end = Math.min(messages.length, start + limit);
+        } else {
+          end = messages.length;
+          start = Math.max(0, end - limit);
         }
 
-        const start = Math.max(0, end - limit);
         const page = messages.slice(start, end);
 
         return {
           messages: page,
           hasMoreBefore: start > 0,
           nextBefore: page[0]?.id ?? null,
+          hasMoreAfter: end < messages.length,
+          nextAfter: page[page.length - 1]?.id ?? null,
         };
       }),
     );
@@ -67,16 +97,21 @@ export class MessagesApiService {
             messages: [],
             hasMoreBefore: false,
             nextBefore: null,
+            hasMoreAfter: false,
+            nextAfter: null,
           };
         }
 
         const start = Math.max(0, index - CONTEXT_RADIUS);
-        const page = messages.slice(start);
+        const end = Math.min(messages.length, index + CONTEXT_RADIUS + 1);
+        const page = messages.slice(start, end);
 
         return {
           messages: page,
           hasMoreBefore: start > 0,
           nextBefore: page[0]?.id ?? null,
+          hasMoreAfter: end < messages.length,
+          nextAfter: page[page.length - 1]?.id ?? null,
         };
       }),
     );
@@ -168,6 +203,12 @@ export class MessagesApiService {
           return false;
         }
 
+        const deleted = history.find((message) => message.id === messageId);
+
+        if (deleted?.attachments?.length) {
+          this.attachmentsApi.release(deleted.attachments);
+        }
+
         this.historyByChat.set(chatId, nextHistory);
         return true;
       }),
@@ -213,6 +254,11 @@ export class MessagesApiService {
                 };
 
                 targetHistory.push(message);
+
+                if (message.attachments?.length) {
+                  this.attachmentsApi.retain(message.attachments);
+                }
+
                 return message;
               }),
             ),

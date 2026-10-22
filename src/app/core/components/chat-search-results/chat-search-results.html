@@ -1,5 +1,7 @@
 @if (groups().length === 0) {
-    <p class="state">{{ isUsersLoading() ? 'Ищем…' : 'Ничего не найдено' }}</p>
+    <p class="state">
+        {{ isUsersLoading() ? 'Ищем…' : hasError() ? 'Не удалось выполнить поиск' : 'Ничего не найдено' }}
+    </p>
 } @else {
     <p-listbox
         [options]="groups()"

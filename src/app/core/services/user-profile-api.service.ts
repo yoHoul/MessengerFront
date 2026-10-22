@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, forkJoin, map, shareReplay } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, forkJoin, map, shareReplay, take } from 'rxjs';
 
 import { User } from '../type/user';
 
@@ -19,12 +19,12 @@ export class UserProfileApiService {
   );
 
   getProfile(userId: string): Observable<User | null> {
-    return this.getUsers().pipe(
+    return this.getUsersOnce().pipe(
       map((users) => users.find((user) => user.id === userId) ?? null),
     );
   }
 
-  getUsers(): Observable<User[]> {
+  watchUsers(): Observable<User[]> {
     return combineLatest([this.usersRequest, this.extraUsers]).pipe(
       map(([users, extraUsers]) => {
         const merged = new Map(users.map((user) => [user.id, user]));
@@ -36,6 +36,10 @@ export class UserProfileApiService {
         return [...merged.values()];
       }),
     );
+  }
+
+  getUsersOnce(): Observable<User[]> {
+    return this.watchUsers().pipe(take(1));
   }
 
   upsertUser(user: User): void {

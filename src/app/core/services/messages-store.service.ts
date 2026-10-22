@@ -25,7 +25,7 @@ export class MessagesStoreService {
   getInitialPage(chatId: string): Observable<ChatMessagesState> {
     const cached = this.states().get(chatId);
 
-    if (cached) {
+    if (cached && !cached.hasMoreAfter) {
       return of(this.snapshot(cached));
     }
 
@@ -34,6 +34,7 @@ export class MessagesStoreService {
         const state: ChatMessagesState = {
           ...page,
           loadingOlder: false,
+          loadingNewer: false,
         };
 
         this.commit(chatId, state);
@@ -96,6 +97,60 @@ export class MessagesStoreService {
       );
   }
 
+  loadNewer(chatId: string): Observable<ChatMessagesState | null> {
+    const current = this.states().get(chatId);
+
+    if (!current || !current.hasMoreAfter || current.loadingNewer) {
+      return of(null);
+    }
+
+    this.commit(chatId, { ...current, loadingNewer: true });
+
+    return this.messagesApi
+      .getMessages(chatId, {
+        after: current.nextAfter,
+        limit: PAGE_SIZE,
+      })
+      .pipe(
+        map((page) => {
+          const latest = this.states().get(chatId) ?? current;
+          const loadedIds = new Set(
+            latest.messages.map((message) => message.id),
+          );
+          const newer = page.messages.filter(
+            (message) => !loadedIds.has(message.id),
+          );
+
+          const state: ChatMessagesState = {
+            ...latest,
+            messages: [...latest.messages, ...newer],
+            hasMoreAfter: page.hasMoreAfter,
+            nextAfter: page.nextAfter,
+            loadingNewer: false,
+          };
+
+          this.commit(chatId, state);
+          return this.snapshot(state);
+        }),
+        catchError((error) => {
+          const latest = this.states().get(chatId);
+
+          if (latest) {
+            this.commit(chatId, { ...latest, loadingNewer: false });
+          }
+
+          return throwError(() => error);
+        }),
+        finalize(() => {
+          const latest = this.states().get(chatId);
+
+          if (latest?.loadingNewer) {
+            this.commit(chatId, { ...latest, loadingNewer: false });
+          }
+        }),
+      );
+  }
+
   getLoadedMessages(chatId: string): Message[] {
     return [...(this.states().get(chatId)?.messages ?? [])];
   }
@@ -103,12 +158,16 @@ export class MessagesStoreService {
   getPagination(chatId: string): {
     hasMoreBefore: boolean;
     nextBefore: string | null;
+    hasMoreAfter: boolean;
+    nextAfter: string | null;
   } {
     const state = this.states().get(chatId);
 
     return {
       hasMoreBefore: state?.hasMoreBefore ?? false,
       nextBefore: state?.nextBefore ?? null,
+      hasMoreAfter: state?.hasMoreAfter ?? false,
+      nextAfter: state?.nextAfter ?? null,
     };
   }
 
@@ -119,7 +178,10 @@ export class MessagesStoreService {
       messages: [...messages],
       hasMoreBefore: state?.hasMoreBefore ?? false,
       nextBefore: state?.nextBefore ?? null,
+      hasMoreAfter: state?.hasMoreAfter ?? false,
+      nextAfter: state?.nextAfter ?? null,
       loadingOlder: state?.loadingOlder ?? false,
+      loadingNewer: state?.loadingNewer ?? false,
     });
   }
 
@@ -131,6 +193,10 @@ export class MessagesStoreService {
         this.commit(chatId, {
           ...state,
           messages: [...state.messages, message],
+          hasMoreAfter: state.hasMoreAfter,
+          nextAfter: state.hasMoreAfter
+            ? state.nextAfter
+            : message.id,
         });
       }
 
@@ -146,7 +212,10 @@ export class MessagesStoreService {
         this.commit(chatId, {
           ...page,
           messages,
+          hasMoreAfter: page.hasMoreAfter,
+          nextAfter: page.hasMoreAfter ? page.nextAfter : message.id,
           loadingOlder: false,
+          loadingNewer: false,
         });
       }),
       map(() => undefined),
@@ -170,6 +239,7 @@ export class MessagesStoreService {
         const state: ChatMessagesState = {
           ...page,
           loadingOlder: false,
+          loadingNewer: false,
         };
 
         this.commit(chatId, state);

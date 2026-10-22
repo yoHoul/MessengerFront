@@ -57,6 +57,10 @@
             <span class="group-info__count">{{ memberCountLabel() }}</span>
         }
 
+        @if (error()) {
+            <p class="group-info__error">{{ error() }}</p>
+        }
+
         <div class="group-info__members">
             @for (member of members(); track member.id) {
                 <div class="group-member">

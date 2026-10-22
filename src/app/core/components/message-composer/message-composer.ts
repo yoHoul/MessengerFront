@@ -3,6 +3,7 @@ import { ButtonModule } from '@openng/optimus-ui/button';
 import { Textarea } from '@openng/optimus-ui/textarea';
 
 import { Message, MessageAttachment } from '../../type/message';
+import { isMobileViewport } from '../../utils/is-mobile';
 
 @Component({
   imports: [ButtonModule, Textarea],
@@ -30,7 +31,7 @@ export class MessageComposer {
   }
 
   protected onEnter(event: Event): void {
-    if ((event as KeyboardEvent).shiftKey) {
+    if (isMobileViewport() || (event as KeyboardEvent).shiftKey) {
       return;
     }
 
