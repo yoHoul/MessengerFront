@@ -78,6 +78,9 @@ export class SideMenu {
   protected readonly oldPassword = signal('');
   protected readonly newPassword = signal('');
   protected readonly confirmPassword = signal('');
+  protected readonly showOldPassword = signal(false);
+  protected readonly showNewPassword = signal(false);
+  protected readonly showConfirmPassword = signal(false);
   protected readonly passwordError = signal('');
   protected readonly passwordSuccess = signal('');
   protected readonly isPasswordSaving = signal(false);

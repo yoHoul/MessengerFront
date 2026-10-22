@@ -17,11 +17,12 @@ import { ButtonModule } from '@openng/optimus-ui/button';
 import { DialogModule } from '@openng/optimus-ui/dialog';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { Textarea } from '@openng/optimus-ui/textarea';
-import { catchError, of, switchMap } from 'rxjs';
+import { Observable, Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 import { CurrentUserService } from '../../services/current-user.service';
 import { DraftsService } from '../../services/drafts.service';
 import { GroupInfoApiService } from '../../services/group-info-api.service';
+import { MessagesApiService } from '../../services/messages-api.service';
 import { MessagesStoreService } from '../../services/messages-store.service';
 import { UserProfileApiService } from '../../services/user-profile-api.service';
 import { ChatListItem } from '../../type/chat-list-item';
@@ -29,6 +30,7 @@ import { ChatPreview } from '../../type/chat-preview';
 import { GroupRenameRequest } from '../../type/group-rename-request';
 import { MessageForwardRequest } from '../../type/message-forward-request';
 import { Message, MessageAttachment, MessageReply } from '../../type/message';
+import { ChatMessagesState } from '../../type/message-page';
 import { User } from '../../type/user';
 import { UserPicker } from '../user-picker/user-picker';
 
@@ -36,6 +38,13 @@ interface MessageTextPart {
   text: string;
   href?: string;
 }
+
+interface MessageSearchOutcome {
+  messages: Message[];
+  source: 'local' | 'api' | null;
+}
+
+type ScrollMode = 'bottom' | 'preserve' | 'none';
 
 @Component({
   imports: [
@@ -57,14 +66,22 @@ export class ChatWindow {
   private readonly drafts = inject(DraftsService);
   private readonly userProfileApi = inject(UserProfileApiService);
   private readonly groupInfoApi = inject(GroupInfoApiService);
+  private readonly messagesApi = inject(MessagesApiService);
   private readonly messagesStore = inject(MessagesStoreService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly messagesContainer =
     viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
+  private readonly messageSearchInput =
+    viewChild<ElementRef<HTMLInputElement>>('messageSearchInput');
 
   private attachmentSequence = 0;
   private highlightTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly searchQuery$ = new Subject<string>();
+  private readonly scrollMode = signal<ScrollMode>('bottom');
+  private scrollAnchorHeight = 0;
+  private scrollAnchorTop = 0;
+  private searchScrollTop = 0;
 
   readonly chat = input<ChatListItem | null>(null);
   readonly messageSent = output<Message>();
@@ -78,6 +95,16 @@ export class ChatWindow {
   protected readonly draft = signal('');
   protected readonly pendingAttachments = signal<MessageAttachment[]>([]);
   protected readonly selectedImage = signal<MessageAttachment | null>(null);
+  protected readonly hasMoreBefore = signal(false);
+  protected readonly isLoadingOlder = signal(false);
+  protected readonly isMessageSearchOpen = signal(false);
+  protected readonly messageSearchQuery = signal('');
+  protected readonly messageSearchResults = signal<Message[]>([]);
+  protected readonly messageSearchSource = signal<'local' | 'api' | null>(
+    null,
+  );
+  protected readonly hasMessageSearchRun = signal(false);
+  protected readonly isMessageSearchLoading = signal(false);
   protected readonly isImageOpen = signal(false);
   protected readonly replyTo = signal<Message | null>(null);
   protected readonly editingMessageId = signal<string | null>(null);
@@ -181,6 +208,11 @@ export class ChatWindow {
       .pipe(
         switchMap((chatId) => {
           this.messages.set([]);
+          this.hasMoreBefore.set(false);
+          this.isLoadingOlder.set(false);
+          this.scrollMode.set('bottom');
+          this.closeMessageSearch(false);
+          this.searchQuery$.next('');
           this.clearPendingAttachments();
           this.draft.set(chatId ? this.drafts.getDraft(chatId) : '');
           this.replyTo.set(null);
@@ -189,24 +221,96 @@ export class ChatWindow {
           this.isDeleteMessageOpen.set(false);
 
           if (!chatId) {
-            return of<Message[]>([]);
+            return of<ChatMessagesState>({
+              messages: [],
+              hasMoreBefore: false,
+              nextBefore: null,
+              loadingOlder: false,
+            });
           }
 
-          return this.messagesStore
-            .getMessages(chatId)
-            .pipe(catchError(() => of<Message[]>([])));
+          return this.messagesStore.getInitialPage(chatId).pipe(
+            catchError(() =>
+              of<ChatMessagesState>({
+                messages: [],
+                hasMoreBefore: false,
+                nextBefore: null,
+                loadingOlder: false,
+              }),
+            ),
+          );
         }),
         takeUntilDestroyed(),
       )
-      .subscribe((messages) => this.messages.set(messages));
+      .subscribe((state) => {
+        this.scrollMode.set('bottom');
+        this.messages.set(state.messages);
+        this.hasMoreBefore.set(state.hasMoreBefore);
+        this.isLoadingOlder.set(false);
+      });
+
+    this.searchQuery$
+      .pipe(
+        debounceTime(200),
+        distinctUntilChanged(),
+        switchMap((query): Observable<MessageSearchOutcome> => {
+          const chatId = this.chat()?.id;
+          const normalizedQuery = query.trim();
+          const localResults = this.messages().filter((message) =>
+            this.matchesSearch(message, normalizedQuery),
+          );
+
+          this.hasMessageSearchRun.set(false);
+          this.messageSearchSource.set(null);
+          this.messageSearchResults.set([]);
+          this.isMessageSearchLoading.set(false);
+
+          if (!chatId || normalizedQuery.length < 2) {
+            return of({ messages: [], source: null });
+          }
+
+          if (localResults.length > 0) {
+            return of({ messages: localResults, source: 'local' as const });
+          }
+
+          this.isMessageSearchLoading.set(true);
+
+          return this.messagesApi.searchMessages(chatId, normalizedQuery).pipe(
+            map((messages) => ({ messages, source: 'api' as const })),
+            catchError(() => of({ messages: [], source: 'api' as const })),
+          );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe((outcome) => {
+        this.messageSearchResults.set(outcome.messages);
+        this.messageSearchSource.set(outcome.source);
+        this.isMessageSearchLoading.set(false);
+        this.hasMessageSearchRun.set(outcome.source !== null);
+      });
 
     effect(() => {
       this.messages();
-      queueMicrotask(() => {
+      const mode = this.scrollMode();
+
+      setTimeout(() => {
         const element = this.messagesContainer()?.nativeElement;
-        element?.scrollTo({ top: element.scrollHeight });
-      });
-    });
+
+        if (!element) {
+          this.scrollMode.set('none');
+          return;
+        }
+
+        if (mode === 'bottom') {
+          element.scrollTop = element.scrollHeight;
+        } else if (mode === 'preserve') {
+          element.scrollTop =
+            this.scrollAnchorTop +
+            (element.scrollHeight - this.scrollAnchorHeight);
+        }
+
+        this.scrollMode.set('none');
+      }, 0);    });
 
     this.destroyRef.onDestroy(() => {
       if (this.highlightTimer) {
@@ -281,6 +385,8 @@ export class ChatWindow {
       attachments,
     };
 
+    this.closeMessageSearch(false);
+    this.scrollMode.set('bottom');
     this.updateCurrentMessages([...this.messages(), message]);
     this.draft.set('');
     this.drafts.clearDraft(chat.id);
@@ -496,6 +602,115 @@ export class ChatWindow {
     return parts;
   }
 
+  protected toggleMessageSearch(): void {
+    if (this.isMessageSearchOpen()) {
+      this.closeMessageSearch();
+      return;
+    }
+
+    this.searchScrollTop =
+      this.messagesContainer()?.nativeElement.scrollTop ?? 0;
+    this.isMessageSearchOpen.set(true);
+    this.messageSearchQuery.set('');
+    this.messageSearchResults.set([]);
+    this.messageSearchSource.set(null);
+    this.hasMessageSearchRun.set(false);
+    this.isMessageSearchLoading.set(false);
+
+    queueMicrotask(() => this.messageSearchInput()?.nativeElement.focus());
+  }
+
+  protected closeMessageSearch(restoreScroll = true): void {
+    const wasOpen = this.isMessageSearchOpen();
+
+    this.isMessageSearchOpen.set(false);
+    this.messageSearchQuery.set('');
+    this.messageSearchResults.set([]);
+    this.messageSearchSource.set(null);
+    this.hasMessageSearchRun.set(false);
+    this.isMessageSearchLoading.set(false);
+
+    if (wasOpen && restoreScroll) {
+      setTimeout(() => {
+        const element = this.messagesContainer()?.nativeElement;
+
+        if (element) {
+          element.scrollTop = this.searchScrollTop;
+        }
+      }, 0);
+    }
+  }
+
+  protected onMessageSearchInput(event: Event): void {
+    const query = (event.target as HTMLInputElement).value;
+
+    this.messageSearchQuery.set(query);
+    this.searchQuery$.next(query);
+  }
+
+  protected onMessageSearchResult(message: Message): void {
+    this.jumpToMessageById(message.id);
+  }
+
+  protected onMessagesScroll(event: Event): void {
+    const element = event.target as HTMLElement;
+
+    if (element.scrollTop <= 80) {
+      this.loadOlder();
+    }
+  }
+
+  protected loadOlder(): void {
+    const chat = this.chat();
+
+    if (!chat || this.isLoadingOlder() || !this.hasMoreBefore()) {
+      return;
+    }
+
+    const element = this.messagesContainer()?.nativeElement;
+    this.scrollAnchorHeight = element?.scrollHeight ?? 0;
+    this.scrollAnchorTop = element?.scrollTop ?? 0;
+    this.isLoadingOlder.set(true);
+
+    this.messagesStore
+      .loadOlder(chat.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (state) => {
+          this.isLoadingOlder.set(false);
+
+          if (!state) {
+            this.scrollMode.set('none');
+            return;
+          }
+
+          this.scrollMode.set('preserve');
+          this.messages.set(state.messages);
+          this.hasMoreBefore.set(state.hasMoreBefore);
+        },
+        error: () => {
+          this.isLoadingOlder.set(false);
+          this.scrollMode.set('none');
+        },
+      });
+  }
+
+  private matchesSearch(message: Message, query: string): boolean {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+
+    if (!normalizedQuery) {
+      return false;
+    }
+
+    const attachmentNames = (message.attachments ?? [])
+      .map((attachment) => attachment.name)
+      .join(' ');
+
+    return `${message.text} ${attachmentNames}`
+      .toLocaleLowerCase()
+      .includes(normalizedQuery);
+  }
+
   protected replyAuthorName(message: Message): string {
     if (message.replyTo) {
       return message.replyTo.authorName;
@@ -507,8 +722,11 @@ export class ChatWindow {
   }
 
   protected jumpToMessage(message: Message): void {
+    this.jumpToMessageById(this.replyTargetId(message));
+  }
+
+  private jumpToMessageById(targetId: string | null): void {
     const chat = this.chat();
-    const targetId = this.replyTargetId(message);
 
     if (!chat || !targetId) {
       return;
@@ -522,9 +740,15 @@ export class ChatWindow {
           return;
         }
 
+        this.scrollMode.set('none');
         this.messages.set(this.messagesStore.getLoadedMessages(chat.id));
+        this.hasMoreBefore.set(
+          this.messagesStore.getPagination(chat.id).hasMoreBefore,
+        );
+        this.isLoadingOlder.set(false);
+        this.closeMessageSearch(false);
 
-        queueMicrotask(() => {
+        setTimeout(() => {
           const element = this.document.getElementById(`message-${targetId}`);
           element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           this.highlightedMessageId.set(targetId);
@@ -537,7 +761,7 @@ export class ChatWindow {
             () => this.highlightedMessageId.set(null),
             1600,
           );
-        });
+        }, 0);
       });
   }
 

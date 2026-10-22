@@ -27,13 +27,95 @@
                     <span class="title">{{ currentChat.title }}</span>
                 </div>
             }
+
+            <button
+                type="button"
+                class="header__search"
+                aria-label="Поиск по сообщениям"
+                (click)="toggleMessageSearch()"
+            >
+                <i class="pi pi-search" aria-hidden="true"></i>
+            </button>
         </div>
 
-        <div class="messages" #messagesContainer>
-            @if (messages().length === 0) {
-                <p class="empty">Сообщений пока нет</p>
-            } @else {
-                @for (message of messages(); track message.id) {
+        @if (isMessageSearchOpen()) {
+            <div class="message-search">
+                <div class="message-search__field">
+                    <i class="pi pi-search" aria-hidden="true"></i>
+                    <input
+                        #messageSearchInput
+                        pInputText
+                        type="text"
+                        class="message-search__input"
+                        placeholder="Поиск по сообщениям"
+                        [value]="messageSearchQuery()"
+                        (input)="onMessageSearchInput($event)"
+                    />
+                    <button
+                        type="button"
+                        class="message-search__close"
+                        aria-label="Закрыть поиск"
+                        (click)="closeMessageSearch()"
+                    >
+                        <i class="pi pi-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                @if (messageSearchSource(); as source) {
+                    <span class="message-search__source">
+                        {{ source === 'local' ? 'В загруженных сообщениях' : 'В истории' }}
+                    </span>
+                }
+
+                <div class="message-search__results">
+                    @if (isMessageSearchLoading()) {
+                        <p class="message-search__state">Ищем…</p>
+                    } @else if (messageSearchResults().length > 0) {
+                        @for (result of messageSearchResults(); track result.id) {
+                            <button
+                                type="button"
+                                class="message-search__result"
+                                (click)="onMessageSearchResult(result)"
+                            >
+                                <span class="message-search__meta">
+                                    {{ authorName(result) }}
+                                    <span>·</span>
+                                    {{ result.createdAt | date: 'dd.MM.yyyy, HH:mm' }}
+                                </span>
+                                <span class="message-search__text">
+                                    {{ messageText(result) }}
+                                </span>
+                            </button>
+                        }
+                    } @else if (hasMessageSearchRun()) {
+                        <p class="message-search__state">Ничего не найдено</p>
+                    } @else {
+                        <p class="message-search__state">Введите минимум 2 символа</p>
+                    }
+                </div>
+            </div>
+        } @else {
+            <div
+                class="messages"
+                #messagesContainer
+                (scroll)="onMessagesScroll($event)"
+            >
+                @if (isLoadingOlder()) {
+                    <p class="messages__loading">Загружаем старые сообщения…</p>
+                } @else if (hasMoreBefore()) {
+                    <button
+                        type="button"
+                        class="messages__load-older"
+                        (click)="loadOlder()"
+                    >
+                        Загрузить ещё
+                    </button>
+                }
+
+                @if (messages().length === 0) {
+                    <p class="empty">Сообщений пока нет</p>
+                } @else {
+                    @for (message of messages(); track message.id) {
                     <div
                         class="message"
                         [id]="'message-' + message.id"
@@ -237,6 +319,7 @@
                 }
             }
         </div>
+        }
 
         @if (replyTo(); as reply) {
             <div class="composer-reply">

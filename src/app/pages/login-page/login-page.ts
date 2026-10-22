@@ -20,6 +20,8 @@ export class LoginPage {
   protected readonly login = signal('');
   protected readonly password = signal('');
   protected readonly confirmPassword = signal('');
+  protected readonly showPassword = signal(false);
+  protected readonly showConfirmPassword = signal(false);
   protected readonly error = signal('');
   protected readonly isSubmitting = signal(false);
 
@@ -41,6 +43,8 @@ export class LoginPage {
     this.mode.update((mode) => (mode === 'login' ? 'register' : 'login'));
     this.error.set('');
     this.confirmPassword.set('');
+    this.showPassword.set(false);
+    this.showConfirmPassword.set(false);
   }
 
   protected submit(event?: Event): void {
