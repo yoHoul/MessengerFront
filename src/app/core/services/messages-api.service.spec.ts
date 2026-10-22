@@ -9,7 +9,8 @@ import { vi } from 'vitest';
 
 import { CurrentUserService } from './current-user.service';
 import { MessagesApiService } from './messages-api.service';
-import { UserProfileApiService } from './user-profile-api.service';
+import { AttachmentsApi } from '../api/attachments-api';
+import { UserDirectoryApi } from '../api/user-directory-api';
 import { User } from '../type/user';
 
 const currentUser: User = {
@@ -54,10 +55,20 @@ describe('MessagesApiService mutations', () => {
           },
         },
         {
-          provide: UserProfileApiService,
+          provide: UserDirectoryApi,
           useValue: {
             getProfile: vi.fn(() => of(sourceAuthor)),
-            getUsers: vi.fn(() => of([currentUser, sourceAuthor])),
+            getUsersOnce: vi.fn(() => of([currentUser, sourceAuthor])),
+            watchUsers: vi.fn(() => of([currentUser, sourceAuthor])),
+            upsertUser: vi.fn(),
+          },
+        },
+        {
+          provide: AttachmentsApi,
+          useValue: {
+            upload: vi.fn(() => of([])),
+            retain: vi.fn(),
+            release: vi.fn(),
           },
         },
       ],

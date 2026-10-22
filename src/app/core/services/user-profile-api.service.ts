@@ -1,11 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, forkJoin, map, shareReplay, take } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, forkJoin, map, of, shareReplay, take } from 'rxjs';
 
 import { User } from '../type/user';
+import { UserDirectoryApi } from '../api/user-directory-api';
 
 @Injectable({ providedIn: 'root' })
-export class UserProfileApiService {
+export class UserProfileApiService implements UserDirectoryApi {
   private readonly http = inject(HttpClient);
 
   private readonly extraUsers = new BehaviorSubject<User[]>([]);
@@ -21,6 +22,28 @@ export class UserProfileApiService {
   getProfile(userId: string): Observable<User | null> {
     return this.getUsersOnce().pipe(
       map((users) => users.find((user) => user.id === userId) ?? null),
+    );
+  }
+
+  searchUsers(query: string, tagOnly: boolean): Observable<User[]> {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+
+    if (!normalizedQuery) {
+      return of([]);
+    }
+
+    return this.getUsersOnce().pipe(
+      map((users) =>
+        users.filter(
+          (user) =>
+            tagOnly
+              ? user.username.toLocaleLowerCase().includes(normalizedQuery)
+              : user.displayName
+                  .toLocaleLowerCase()
+                  .includes(normalizedQuery) ||
+                user.username.toLocaleLowerCase().includes(normalizedQuery),
+        ),
+      ),
     );
   }
 

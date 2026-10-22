@@ -24,7 +24,7 @@ import {
 
 import { CurrentUserService } from '../../services/current-user.service';
 import { DirectoryStoreService } from '../../services/directory-store.service';
-import { MessagesApiService } from '../../services/messages-api.service';
+import { MessagesApi } from '../../api/messages-api';
 import { Message } from '../../type/message';
 
 interface SearchOutcome {
@@ -41,7 +41,7 @@ interface SearchOutcome {
 export class MessageSearch implements OnInit {
   private readonly currentUser = inject(CurrentUserService);
   private readonly directory = inject(DirectoryStoreService);
-  private readonly messagesApi = inject(MessagesApiService);
+  private readonly messagesApi = inject(MessagesApi);
 
   readonly messages = input<Message[]>([]);
   readonly chatId = input<string | null>(null);

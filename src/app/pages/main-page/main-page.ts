@@ -8,11 +8,11 @@ import { ChatWindow } from '../../core/components/chat-window/chat-window';
 import { ForwardDialog } from '../../core/components/forward-dialog/forward-dialog';
 import { SearchChat } from '../../core/components/search-chat/search-chat';
 import { SideMenu } from '../../core/components/side-menu/side-menu';
-import { ChatsApiService } from '../../core/services/chats-api.service';
+import { ChatsApi } from '../../core/api/chats-api';
+import { GroupInfoApi } from '../../core/api/group-info-api';
+import { MessagesApi } from '../../core/api/messages-api';
 import { ChatsStoreService } from '../../core/services/chats-store.service';
 import { CurrentUserService } from '../../core/services/current-user.service';
-import { GroupInfoApiService } from '../../core/services/group-info-api.service';
-import { MessagesApiService } from '../../core/services/messages-api.service';
 import { MessagesStoreService } from '../../core/services/messages-store.service';
 import { ChatPreview } from '../../core/type/chat-preview';
 import { GroupCreateRequest } from '../../core/type/group-create-request';
@@ -35,11 +35,11 @@ import { User } from '../../core/type/user';
   templateUrl: './main-page.html',
 })
 export class MainPage {
-  private readonly chatsApi = inject(ChatsApiService);
+  private readonly chatsApi = inject(ChatsApi);
   private readonly chatsStore = inject(ChatsStoreService);
   private readonly currentUser = inject(CurrentUserService);
-  private readonly groupInfoApi = inject(GroupInfoApiService);
-  private readonly messagesApi = inject(MessagesApiService);
+  private readonly groupsApi = inject(GroupInfoApi);
+  private readonly messagesApi = inject(MessagesApi);
   private readonly messagesStore = inject(MessagesStoreService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -124,12 +124,12 @@ export class MainPage {
     }
 
     this.chatsApi
-      .createGroupChat(title, currentUser.id)
+      .createGroupChat(title, currentUser.id, request.memberIds)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((chat) => {
         this.chatsStore.addChat(chat);
 
-        this.groupInfoApi
+        this.groupsApi
           .createGroup(chat.id, currentUser.id, request.memberIds)
           .subscribe(() => {
             this.selectChat(chat.id);

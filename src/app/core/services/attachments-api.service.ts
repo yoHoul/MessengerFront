@@ -2,10 +2,11 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map, of } from 'rxjs';
 
 import { MessageAttachment } from '../type/message';
+import { AttachmentsApi } from '../api/attachments-api';
 import { MockIdService } from './mock-id.service';
 
 @Injectable({ providedIn: 'root' })
-export class AttachmentsApiService {
+export class AttachmentsApiService implements AttachmentsApi {
   private readonly ids = inject(MockIdService);
   private readonly references = new Map<string, number>();
 

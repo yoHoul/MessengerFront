@@ -4,7 +4,7 @@ import { vi } from 'vitest';
 
 import { Message } from '../type/message';
 import { MessagePage } from '../type/message-page';
-import { MessagesApiService } from './messages-api.service';
+import { MessagesApi } from '../api/messages-api';
 import { MessagesStoreService } from './messages-store.service';
 
 function message(id: string): Message {
@@ -44,7 +44,7 @@ describe('MessagesStoreService', () => {
     TestBed.configureTestingModule({
       providers: [
         MessagesStoreService,
-        { provide: MessagesApiService, useValue: api },
+        { provide: MessagesApi, useValue: api },
       ],
     });
 
@@ -78,7 +78,7 @@ describe('MessagesStoreService', () => {
   });
 
   it('loads newer messages in a window', () => {
-    const api = TestBed.inject(MessagesApiService) as unknown as {
+    const api = TestBed.inject(MessagesApi) as unknown as {
       getMessages: ReturnType<typeof vi.fn>;
     };
 

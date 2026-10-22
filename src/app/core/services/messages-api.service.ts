@@ -5,21 +5,22 @@ import { Observable, catchError, map, of, switchMap, tap, throwError } from 'rxj
 import { Message, MessageReply } from '../type/message';
 import { MessagePage } from '../type/message-page';
 import { SendMessageInput } from '../type/send-message-input';
+import { MessagesApi } from '../api/messages-api';
+import { AttachmentsApi } from '../api/attachments-api';
+import { UserDirectoryApi } from '../api/user-directory-api';
 import { CurrentUserService } from './current-user.service';
-import { AttachmentsApiService } from './attachments-api.service';
 import { MockIdService } from './mock-id.service';
-import { UserProfileApiService } from './user-profile-api.service';
 
 const PAGE_SIZE = 20;
 const CONTEXT_RADIUS = 10;
 
 @Injectable({ providedIn: 'root' })
-export class MessagesApiService {
+export class MessagesApiService implements MessagesApi {
   private readonly http = inject(HttpClient);
   private readonly currentUser = inject(CurrentUserService);
-  private readonly attachmentsApi = inject(AttachmentsApiService);
+  private readonly attachmentsApi = inject(AttachmentsApi);
   private readonly ids = inject(MockIdService);
-  private readonly userProfileApi = inject(UserProfileApiService);
+  private readonly userProfileApi = inject(UserDirectoryApi);
 
   private readonly historyByChat = new Map<string, Message[]>();
 

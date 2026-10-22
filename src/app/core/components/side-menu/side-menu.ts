@@ -21,7 +21,7 @@ import { catchError, of } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { CurrentUserService } from '../../services/current-user.service';
 import { ThemeService } from '../../services/theme.service';
-import { UserProfileApiService } from '../../services/user-profile-api.service';
+import { UserDirectoryApi } from '../../api/user-directory-api';
 import { GroupCreateRequest } from '../../type/group-create-request';
 import { User } from '../../type/user';
 import { AccountSettingsDialog } from '../account-settings-dialog/account-settings-dialog';
@@ -48,7 +48,7 @@ export class SideMenu {
   private readonly currentUser = inject(CurrentUserService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
-  private readonly userProfileApi = inject(UserProfileApiService);
+  private readonly userProfileApi = inject(UserDirectoryApi);
 
   protected readonly theme = inject(ThemeService);
 
