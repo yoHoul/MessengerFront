@@ -1,0 +1,121 @@
+<p-dialog
+    [visible]="visible()"
+    (visibleChange)="visibleChange.emit($event)"
+    header="Информация о группе"
+    styleClass="group-info-dialog"
+    [draggable]="false"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <div class="group-info">
+        <p-avatar [label]="initials()" shape="circle" size="xlarge"></p-avatar>
+
+        @if (editing()) {
+            <div class="group-info__edit">
+                <input
+                    pInputText
+                    fluid
+                    type="text"
+                    placeholder="Название группы"
+                    [value]="titleDraft()"
+                    (input)="onTitleInput($event)"
+                />
+
+                <div class="group-info__edit-actions">
+                    <p-button
+                        label="Отменить"
+                        [text]="true"
+                        (onClick)="cancelRename.emit()"
+                    ></p-button>
+                    <p-button
+                        label="Переименовать"
+                        [disabled]="!canRename()"
+                        (onClick)="rename.emit()"
+                    ></p-button>
+                </div>
+            </div>
+        } @else {
+            <div class="group-info__title-row">
+                <span class="group-info__name">{{ title() }}</span>
+
+                @if (owner()) {
+                    <button
+                        type="button"
+                        class="group-info__edit-button"
+                        aria-label="Переименовать группу"
+                        (click)="startRename.emit()"
+                    >
+                        <i class="pi pi-pencil" aria-hidden="true"></i>
+                    </button>
+                }
+            </div>
+        }
+
+        @if (loading()) {
+            <span class="group-info__count">Загрузка...</span>
+        } @else {
+            <span class="group-info__count">{{ memberCountLabel() }}</span>
+        }
+
+        <div class="group-info__members">
+            @for (member of members(); track member.id) {
+                <div class="group-member">
+                    <p-avatar
+                        [label]="memberInitials(member)"
+                        shape="circle"
+                        size="large"
+                    ></p-avatar>
+                    <div class="group-member__info">
+                        <span class="group-member__name">{{ memberName(member) }}</span>
+                        <span class="group-member__tag">&#64;{{ member.username }}</span>
+                    </div>
+
+                    @if (owner() && member.id !== currentUserId()) {
+                        <p-button
+                            type="button"
+                            severity="danger"
+                            size="small"
+                            [text]="true"
+                            [rounded]="true"
+                            ariaLabel="Удалить участника"
+                            (onClick)="removeMember.emit(member)"
+                        >
+                            <i class="pi pi-times" aria-hidden="true"></i>
+                        </p-button>
+                    }
+
+                    @if (member.id !== currentUserId()) {
+                        <p-button
+                            type="button"
+                            severity="secondary"
+                            size="small"
+                            [rounded]="true"
+                            ariaLabel="Написать"
+                            (onClick)="directChat.emit(member)"
+                        >
+                            <i class="pi pi-comments" aria-hidden="true"></i>
+                        </p-button>
+                    }
+                </div>
+            }
+        </div>
+
+        <p-button
+            label="Добавить участника"
+            [text]="true"
+            fluid
+            [disabled]="loading()"
+            (onClick)="addMembers.emit()"
+        ></p-button>
+
+        @if (owner()) {
+            <p-button
+                label="Удалить группу"
+                severity="danger"
+                [text]="true"
+                fluid
+                (onClick)="deleteGroup.emit()"
+            ></p-button>
+        }
+    </div>
+</p-dialog>

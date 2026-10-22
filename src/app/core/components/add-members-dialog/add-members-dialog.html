@@ -1,0 +1,37 @@
+<p-dialog
+    [visible]="visible()"
+    (visibleChange)="visibleChange.emit($event)"
+    header="Добавить участника"
+    styleClass="group-add-dialog"
+    [draggable]="false"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <div class="add-members">
+        @if (loading()) {
+            <p class="add-members__loading">Загрузка...</p>
+        } @else if (visible()) {
+            <app-user-picker
+                [users]="users()"
+                (selectionChange)="selectionChange.emit($event)"
+            ></app-user-picker>
+        }
+
+        @if (error()) {
+            <p class="error">{{ error() }}</p>
+        }
+
+        <div class="dialog-actions">
+            <p-button
+                label="Отмена"
+                [text]="true"
+                (onClick)="visibleChange.emit(false)"
+            ></p-button>
+            <p-button
+                label="Добавить"
+                [disabled]="selectedCount() === 0 || loading()"
+                (onClick)="add.emit()"
+            ></p-button>
+        </div>
+    </div>
+</p-dialog>

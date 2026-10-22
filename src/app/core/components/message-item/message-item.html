@@ -1,0 +1,191 @@
+<div
+    class="message"
+    [id]="'message-' + message().id"
+    [class.message--mine]="isMine()"
+    [class.message--editing]="editing()"
+    [class.message--highlighted]="highlighted()"
+>
+    @if (!isMine()) {
+        <button
+            type="button"
+            class="message__avatar"
+            aria-label="Открыть профиль"
+            (click)="openProfile.emit(message().authorId)"
+        >
+            <p-avatar [label]="authorInitials()" shape="circle"></p-avatar>
+        </button>
+    }
+
+    <div class="message__content">
+        @if (isGroup()) {
+            <button
+                type="button"
+                class="message__author"
+                (click)="openProfile.emit(message().authorId)"
+            >
+                {{ authorName() }}
+            </button>
+        }
+
+        @if (editing()) {
+            <div class="message__edit">
+                <textarea
+                    pTextarea
+                    fluid
+                    rows="3"
+                    [value]="editDraft()"
+                    (input)="onEditInput($event)"
+                    (keydown.enter)="onEditEnter($event)"
+                ></textarea>
+
+                <div class="message__edit-actions">
+                    <p-button
+                        label="Отмена"
+                        [text]="true"
+                        size="small"
+                        (onClick)="editCancel.emit()"
+                    ></p-button>
+                    <p-button
+                        label="Сохранить"
+                        size="small"
+                        [disabled]="!editDraft().trim()"
+                        (onClick)="editSave.emit()"
+                    ></p-button>
+                </div>
+            </div>
+        } @else {
+            <div class="bubble">
+                @if (message().forwardedFrom; as forwarded) {
+                    <span class="forwarded-from">
+                        Переслано от
+                        <button
+                            type="button"
+                            class="forwarded-from__author"
+                            (click)="openProfile.emit(forwarded.authorId)"
+                        >
+                            {{ forwarded.authorName }}
+                        </button>
+                    </span>
+                }
+
+                @if (hasReply()) {
+                    <button
+                        type="button"
+                        class="reply-quote"
+                        aria-label="Перейти к сообщению"
+                        (click)="jumpReply.emit(message())"
+                    >
+                        <span class="reply-quote__author">{{ replyAuthorName() }}</span>
+                        <span class="reply-quote__text">{{ replyText() }}</span>
+                    </button>
+                }
+
+                @if (message().attachments?.length) {
+                    <div class="attachments">
+                        @for (attachment of message().attachments ?? []; track attachment.id) {
+                            @if (attachment.isImage) {
+                                <button
+                                    type="button"
+                                    class="attachment-image"
+                                    (click)="openImage.emit(attachment)"
+                                >
+                                    <img
+                                        [src]="attachment.url"
+                                        [alt]="attachment.name"
+                                    />
+                                </button>
+                            } @else {
+                                <div class="attachment-file">
+                                    <i class="pi pi-file" aria-hidden="true"></i>
+                                    <span class="attachment-file__name">
+                                        {{ attachment.name }}
+                                    </span>
+                                    <a
+                                        class="attachment-file__download"
+                                        [href]="attachment.url"
+                                        [download]="attachment.name"
+                                        aria-label="Скачать файл"
+                                    >
+                                        <i class="pi pi-download" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+
+                @if (message().text) {
+                    <p class="text">
+                        @for (part of messageTextParts(message().text); track $index) {
+                            @if (part.href) {
+                                <a
+                                    [href]="part.href"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >{{ part.text }}</a>
+                            } @else {
+                                {{ part.text }}
+                            }
+                        }
+                    </p>
+                }
+
+                <span class="time">
+                    {{ message().createdAt | date: 'HH:mm' }}
+                    @if (message().editedAt) {
+                        <span class="edited">· изм.</span>
+                    }
+                </span>
+            </div>
+
+            <div class="message__actions">
+                <button
+                    type="button"
+                    class="message__action"
+                    aria-label="Ответить"
+                    (click)="reply.emit(message())"
+                >
+                    <i class="pi pi-reply" aria-hidden="true"></i>
+                </button>
+                <button
+                    type="button"
+                    class="message__action"
+                    aria-label="Переслать"
+                    (click)="forward.emit(message())"
+                >
+                    <i class="pi pi-share-alt" aria-hidden="true"></i>
+                </button>
+
+                @if (isMine()) {
+                    <button
+                        type="button"
+                        class="message__action"
+                        aria-label="Редактировать"
+                        (click)="editStart.emit(message())"
+                    >
+                        <i class="pi pi-pencil" aria-hidden="true"></i>
+                    </button>
+                    <button
+                        type="button"
+                        class="message__action"
+                        aria-label="Удалить"
+                        (click)="deleteMessage.emit(message())"
+                    >
+                        <i class="pi pi-trash" aria-hidden="true"></i>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+
+    @if (isMine()) {
+        <button
+            type="button"
+            class="message__avatar"
+            aria-label="Открыть профиль"
+            (click)="openProfile.emit(message().authorId)"
+        >
+            <p-avatar [label]="authorInitials()" shape="circle"></p-avatar>
+        </button>
+    }
+</div>

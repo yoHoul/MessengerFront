@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, forkJoin, map, of, shareReplay, tap } from 'rxjs';
+import { Observable, forkJoin, map, of, shareReplay, take, tap } from 'rxjs';
 
 import { ChatParticipant, ChatRole } from '../type/chat-participant';
 import { User } from '../type/user';
@@ -20,7 +20,7 @@ export class GroupInfoApiService {
   getMembers(chatId: string): Observable<User[]> {
     return forkJoin({
       participants: this.ensureParticipants(),
-      users: this.userProfileApi.getUsers(),
+      users: this.userProfileApi.getUsers().pipe(take(1)),
     }).pipe(
       map(({ participants, users }) =>
         participants

@@ -47,6 +47,10 @@ export class LoginPage {
     this.showConfirmPassword.set(false);
   }
 
+  private redirectAfterAuth(): void {
+    void this.router.navigateByUrl('/');
+  }
+
   protected submit(event?: Event): void {
     event?.preventDefault();
 
@@ -73,7 +77,7 @@ export class LoginPage {
     this.auth.login({ login, password }).subscribe({
       next: () => {
         this.isSubmitting.set(false);
-        void this.router.navigateByUrl('/');
+        void this.redirectAfterAuth();
       },
       error: () => {
         this.isSubmitting.set(false);
@@ -103,7 +107,7 @@ export class LoginPage {
     this.auth.register({ login, password }).subscribe({
       next: () => {
         this.isSubmitting.set(false);
-        void this.router.navigateByUrl('/');
+        void this.redirectAfterAuth();
       },
       error: (error: HttpErrorResponse) => {
         this.isSubmitting.set(false);

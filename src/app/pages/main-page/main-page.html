@@ -1,4 +1,4 @@
-<div class="container">
+<div class="container" [class.container--chat-open]="!!selectedChat()">
     <div class="chat-menu">
         <div class="menu-header">
             <button
@@ -43,6 +43,7 @@
             (directChatRequested)="onDirectChatRequested($event)"
             (groupRenamed)="onGroupRenamed($event)"
             (groupDeleted)="onGroupDeleted($event)"
+            (backRequested)="onBackToChatList()"
         ></app-chat-window>
     </div>
 

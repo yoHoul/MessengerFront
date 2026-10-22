@@ -1,0 +1,30 @@
+:host {
+    display: contents;
+}
+
+.user-profile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.user-profile__name {
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.user-profile__tag {
+    font-size: 13px;
+    opacity: 0.65;
+}
+
+.user-profile__action {
+    margin-top: 8px;
+}
+
+.user-profile__action-icon {
+    font-size: 1.25rem;
+}

@@ -1,0 +1,57 @@
+<div class="message-search">
+    <div class="message-search__field">
+        <i class="pi pi-search" aria-hidden="true"></i>
+        <input
+            #searchInput
+            pInputText
+            type="text"
+            class="message-search__input"
+            placeholder="Поиск по сообщениям"
+            [value]="query()"
+            (input)="onInput($event)"
+        />
+        <button
+            type="button"
+            class="message-search__close"
+            aria-label="Закрыть поиск"
+            (click)="closed.emit()"
+        >
+            <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    @if (source(); as resultSource) {
+        <span class="message-search__source">
+            {{ resultSource === 'local' ? 'В загруженных сообщениях' : resultSource === 'api' ? 'В истории' : 'Ошибка поиска' }}
+        </span>
+    }
+
+    <div class="message-search__results">
+        @if (isLoading()) {
+            <p class="message-search__state">Ищем…</p>
+        } @else if (results().length > 0) {
+            @for (result of results(); track result.id) {
+                <button
+                    type="button"
+                    class="message-search__result"
+                    (click)="select(result)"
+                >
+                    <span class="message-search__meta">
+                        {{ authorName(result) }}
+                        <span>·</span>
+                        {{ result.createdAt | date: 'dd.MM.yyyy, HH:mm' }}
+                    </span>
+                    <span class="message-search__text">
+                        {{ messageText(result) }}
+                    </span>
+                </button>
+            }
+        } @else if (source() === 'error') {
+            <p class="message-search__state">Не удалось выполнить поиск</p>
+        } @else if (hasRun()) {
+            <p class="message-search__state">Ничего не найдено</p>
+        } @else {
+            <p class="message-search__state">Введите минимум 2 символа</p>
+        }
+    </div>
+</div>

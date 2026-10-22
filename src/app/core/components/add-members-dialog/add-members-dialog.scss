@@ -1,0 +1,27 @@
+:host {
+    display: contents;
+}
+
+.add-members {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.add-members__loading {
+    margin: 0;
+    opacity: 0.7;
+}
+
+.add-members .error {
+    margin: 0;
+    color: #e5484d;
+    font-size: 12px;
+}
+
+.dialog-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
+}

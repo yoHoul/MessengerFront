@@ -1,6 +1,15 @@
 <div class="container">
     @if (chat(); as currentChat) {
         <div class="header">
+            <button
+                type="button"
+                class="header__back"
+                aria-label="Назад к списку чатов"
+                (click)="backRequested.emit()"
+            >
+                <i class="pi pi-arrow-left" aria-hidden="true"></i>
+            </button>
+
             @if (isGroup()) {
                 <button
                     type="button"
@@ -39,61 +48,14 @@
         </div>
 
         @if (isMessageSearchOpen()) {
-            <div class="message-search">
-                <div class="message-search__field">
-                    <i class="pi pi-search" aria-hidden="true"></i>
-                    <input
-                        #messageSearchInput
-                        pInputText
-                        type="text"
-                        class="message-search__input"
-                        placeholder="Поиск по сообщениям"
-                        [value]="messageSearchQuery()"
-                        (input)="onMessageSearchInput($event)"
-                    />
-                    <button
-                        type="button"
-                        class="message-search__close"
-                        aria-label="Закрыть поиск"
-                        (click)="closeMessageSearch()"
-                    >
-                        <i class="pi pi-times" aria-hidden="true"></i>
-                    </button>
-                </div>
-
-                @if (messageSearchSource(); as source) {
-                    <span class="message-search__source">
-                        {{ source === 'local' ? 'В загруженных сообщениях' : 'В истории' }}
-                    </span>
-                }
-
-                <div class="message-search__results">
-                    @if (isMessageSearchLoading()) {
-                        <p class="message-search__state">Ищем…</p>
-                    } @else if (messageSearchResults().length > 0) {
-                        @for (result of messageSearchResults(); track result.id) {
-                            <button
-                                type="button"
-                                class="message-search__result"
-                                (click)="onMessageSearchResult(result)"
-                            >
-                                <span class="message-search__meta">
-                                    {{ authorName(result) }}
-                                    <span>·</span>
-                                    {{ result.createdAt | date: 'dd.MM.yyyy, HH:mm' }}
-                                </span>
-                                <span class="message-search__text">
-                                    {{ messageText(result) }}
-                                </span>
-                            </button>
-                        }
-                    } @else if (hasMessageSearchRun()) {
-                        <p class="message-search__state">Ничего не найдено</p>
-                    } @else {
-                        <p class="message-search__state">Введите минимум 2 символа</p>
-                    }
-                </div>
-            </div>
+            <app-message-search
+                [messages]="messages()"
+                [chatId]="chat()?.id ?? null"
+                [chatTitle]="chat()?.title ?? ''"
+                [isGroup]="isGroup()"
+                (messageSelected)="onMessageSearchSelected($event)"
+                (closed)="closeMessageSearch()"
+            ></app-message-search>
         } @else {
             <div
                 class="messages"
@@ -112,554 +74,122 @@
                     </button>
                 }
 
-                @if (messages().length === 0) {
+                @if (messagesError()) {
+                    <p class="messages__error">{{ messagesError() }}</p>
+                } @else if (messages().length === 0) {
                     <p class="empty">Сообщений пока нет</p>
                 } @else {
                     @for (message of messages(); track message.id) {
-                    <div
-                        class="message"
-                        [id]="'message-' + message.id"
-                        [class.message--mine]="isMine(message)"
-                        [class.message--editing]="editingMessageId() === message.id"
-                        [class.message--highlighted]="highlightedMessageId() === message.id"
-                    >
-                        @if (!isMine(message)) {
-                            <button
-                                type="button"
-                                class="message__avatar"
-                                aria-label="Открыть профиль"
-                                (click)="openUserProfile(message.authorId)"
-                            >
-                                <p-avatar
-                                    [label]="authorInitials(message)"
-                                    shape="circle"
-                                ></p-avatar>
-                            </button>
-                        }
-
-                        <div class="message__content">
-                            @if (isGroup()) {
-                                <button
-                                    type="button"
-                                    class="message__author"
-                                    (click)="openUserProfile(message.authorId)"
-                                >
-                                    {{ authorName(message) }}
-                                </button>
-                            }
-
-                            @if (editingMessageId() === message.id) {
-                                <div class="message__edit">
-                                    <textarea
-                                        pTextarea
-                                        fluid
-                                        rows="3"
-                                        [value]="editDraft()"
-                                        (input)="onEditInput($event)"
-                                        (keydown.enter)="onEditEnter($event)"
-                                    ></textarea>
-
-                                    <div class="message__edit-actions">
-                                        <p-button
-                                            label="Отмена"
-                                            [text]="true"
-                                            size="small"
-                                            (onClick)="cancelEdit()"
-                                        ></p-button>
-                                        <p-button
-                                            label="Сохранить"
-                                            size="small"
-                                            [disabled]="!editDraft().trim()"
-                                            (onClick)="saveEdit()"
-                                        ></p-button>
-                                    </div>
-                                </div>
-                            } @else {
-                                <div class="bubble">
-                                    @if (message.forwardedFrom; as forwarded) {
-                                        <span class="forwarded-from">
-                                            Переслано от
-                                            <button
-                                                type="button"
-                                                class="forwarded-from__author"
-                                                (click)="openUserProfile(forwarded.authorId)"
-                                            >
-                                                {{ forwarded.authorName }}
-                                            </button>
-                                        </span>
-                                    }
-
-                                    @if (message.replyTo || message.replyToId) {
-                                        <button
-                                            type="button"
-                                            class="reply-quote"
-                                            aria-label="Перейти к сообщению"
-                                            (click)="jumpToMessage(message)"
-                                        >
-                                            <span class="reply-quote__author">
-                                                {{ replyAuthorName(message) }}
-                                            </span>
-                                            <span class="reply-quote__text">
-                                                {{ replyText(message) }}
-                                            </span>
-                                        </button>
-                                    }
-
-                                    @if (message.attachments?.length) {
-                                        <div class="attachments">
-                                            @for (attachment of message.attachments ?? []; track attachment.id) {
-                                                @if (attachment.isImage) {
-                                                    <button
-                                                        type="button"
-                                                        class="attachment-image"
-                                                        (click)="openImage(attachment)"
-                                                    >
-                                                        <img
-                                                            [src]="attachment.url"
-                                                            [alt]="attachment.name"
-                                                        />
-                                                    </button>
-                                                } @else {
-                                                    <div class="attachment-file">
-                                                        <i class="pi pi-file" aria-hidden="true"></i>
-                                                        <span class="attachment-file__name">
-                                                            {{ attachment.name }}
-                                                        </span>
-                                                        <a
-                                                            class="attachment-file__download"
-                                                            [href]="attachment.url"
-                                                            [download]="attachment.name"
-                                                            aria-label="Скачать файл"
-                                                        >
-                                                            <i class="pi pi-download" aria-hidden="true"></i>
-                                                        </a>
-                                                    </div>
-                                                }
-                                            }
-                                        </div>
-                                    }
-
-                                    @if (message.text) {
-                                        <p class="text">
-                                            @for (part of messageTextParts(message.text); track $index) {
-                                                @if (part.href) {
-                                                    <a
-                                                        [href]="part.href"
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                    >{{ part.text }}</a>
-                                                } @else {
-                                                    {{ part.text }}
-                                                }
-                                            }
-                                        </p>
-                                    }
-                                    <span class="time">
-                                        {{ message.createdAt | date: 'HH:mm' }}
-                                        @if (message.editedAt) {
-                                            <span class="edited">· изм.</span>
-                                        }
-                                    </span>
-                                </div>
-
-                                <div class="message__actions">
-                                    <button
-                                        type="button"
-                                        class="message__action"
-                                        aria-label="Ответить"
-                                        (click)="startReply(message)"
-                                    >
-                                        <i class="pi pi-reply" aria-hidden="true"></i>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="message__action"
-                                        aria-label="Переслать"
-                                        (click)="requestForward(message)"
-                                    >
-                                        <i class="pi pi-share-alt" aria-hidden="true"></i>
-                                    </button>
-
-                                    @if (isMine(message)) {
-                                        <button
-                                            type="button"
-                                            class="message__action"
-                                            aria-label="Редактировать"
-                                            (click)="startEdit(message)"
-                                        >
-                                            <i class="pi pi-pencil" aria-hidden="true"></i>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="message__action"
-                                            aria-label="Удалить"
-                                            (click)="requestDeleteMessage(message)"
-                                        >
-                                            <i class="pi pi-trash" aria-hidden="true"></i>
-                                        </button>
-                                    }
-                                </div>
-                            }
-                        </div>
-
-                        @if (isMine(message)) {
-                            <button
-                                type="button"
-                                class="message__avatar"
-                                aria-label="Открыть профиль"
-                                (click)="openUserProfile(message.authorId)"
-                            >
-                                <p-avatar
-                                    [label]="authorInitials(message)"
-                                    shape="circle"
-                                ></p-avatar>
-                            </button>
-                        }
-                    </div>
-                }
+                        <app-message-item
+                            [message]="message"
+                            [isGroup]="isGroup()"
+                            [chatTitle]="chat()?.title ?? ''"
+                            [currentUserId]="currentUserId()"
+                            [currentUserName]="currentUserName()"
+                            [editing]="editingMessageId() === message.id"
+                            [editDraft]="editDraft()"
+                            [highlighted]="highlightedMessageId() === message.id"
+                            [replyTarget]="replyTarget(message)"
+                            (reply)="startReply($event)"
+                            (forward)="requestForward($event)"
+                            (editStart)="startEdit($event)"
+                            (editDraftChange)="editDraft.set($event)"
+                            (editSave)="saveEdit()"
+                            (editCancel)="cancelEdit()"
+                            (deleteMessage)="requestDeleteMessage($event)"
+                            (openProfile)="openUserProfile($event)"
+                            (openImage)="openImage($event)"
+                            (jumpReply)="jumpToMessage($event)"
+                        ></app-message-item>
+                    }
             }
         </div>
         }
 
-        @if (replyTo(); as reply) {
-            <div class="composer-reply">
-                <div class="composer-reply__content">
-                    <span class="composer-reply__author">{{ authorName(reply) }}</span>
-                    <span class="composer-reply__text">{{ messageText(reply) }}</span>
-                </div>
-                <button
-                    type="button"
-                    class="composer-reply__cancel"
-                    aria-label="Отменить ответ"
-                    (click)="cancelReply()"
-                >
-                    <i class="pi pi-times" aria-hidden="true"></i>
-                </button>
-            </div>
+        @if (actionError()) {
+            <p class="chat-action-error">{{ actionError() }}</p>
         }
 
-        @if (pendingAttachments().length > 0) {
-            <div class="composer-attachments">
-                @for (attachment of pendingAttachments(); track attachment.id) {
-                    <div class="composer-attachment">
-                        @if (attachment.isImage) {
-                            <img
-                                class="composer-attachment__preview"
-                                [src]="attachment.url"
-                                [alt]="attachment.name"
-                            />
-                        } @else {
-                            <i class="pi pi-file" aria-hidden="true"></i>
-                        }
-
-                        <span class="composer-attachment__name">
-                            {{ attachment.name }}
-                        </span>
-
-                        <button
-                            type="button"
-                            class="composer-attachment__remove"
-                            aria-label="Убрать вложение"
-                            (click)="removePendingAttachment(attachment)"
-                        >
-                            <i class="pi pi-times" aria-hidden="true"></i>
-                        </button>
-                    </div>
-                }
-            </div>
-        }
-
-        <div class="composer">
-            <button
-                type="button"
-                class="composer__attach"
-                aria-label="Прикрепить файл"
-                (click)="fileInput.click()"
-            >
-                <i class="pi pi-paperclip" aria-hidden="true"></i>
-            </button>
-
-            <input
-                #fileInput
-                type="file"
-                multiple
-                hidden
-                (change)="onFilesSelected($event)"
-            />
-
-            <textarea
-                pTextarea
-                fluid
-                autoResize
-                rows="1"
-                placeholder="Сообщение"
-                [value]="draft()"
-                (input)="onDraftInput($event)"
-                (keydown.enter)="onComposerEnter($event)"
-            ></textarea>
-            <p-button
-                label="Отправить"
-                size="small"
-                [style]="{ height: '100%' }"
-                [disabled]="!draft().trim() && pendingAttachments().length === 0"
-                (onClick)="send()"
-            ></p-button>
-        </div>
+        <app-message-composer
+            [draft]="draft()"
+            [pendingAttachments]="pendingAttachments()"
+            [replyTo]="replyTo()"
+            [replyAuthorName]="replyPreviewAuthor()"
+            [replyText]="replyPreviewText()"
+            [isSending]="isSending()"
+            [isUploading]="isUploadingAttachments()"
+            (draftChange)="onDraftChange($event)"
+            (send)="send()"
+            (filesSelected)="onFilesSelected($event)"
+            (removeAttachment)="removePendingAttachment($event)"
+            (cancelReply)="cancelReply()"
+        ></app-message-composer>
     } @else {
         <div class="empty-state">Выберите чат</div>
     }
 </div>
 
-<p-dialog
+<app-user-profile-dialog
     [visible]="isProfileOpen()"
+    [profile]="profile()"
+    [fallbackName]="isGroup() ? 'Пользователь' : chat()?.title ?? ''"
+    [currentUserId]="currentUserId()"
     (visibleChange)="isProfileOpen.set($event)"
-    header="Профиль"
-    styleClass="user-profile-dialog"
-    [draggable]="false"
-    [modal]="true"
-    [dismissableMask]="true"
->
-    <div class="user-profile">
-        <p-avatar [label]="profileInitials()" shape="circle" size="xlarge"></p-avatar>
+    (directChat)="requestDirectChat($event)"
+></app-user-profile-dialog>
 
-        @if (profile(); as peer) {
-            <span class="user-profile__name">{{ profileName() }}</span>
-            <span class="user-profile__tag">&#64;{{ peer.username }}</span>
-
-            @if (!profileIsCurrentUser()) {
-                <p-button
-                    type="button"
-                    class="user-profile__action"
-                    [style]="{ width: '3rem', height: '3rem', borderRadius: '50%' }"
-                    severity="secondary"
-                    [rounded]="true"
-                    ariaLabel="Написать"
-                    (onClick)="requestDirectChat(peer)"
-                >
-                    <i
-                        class="pi pi-comments user-profile__action-icon"
-                        aria-hidden="true"
-                    ></i>
-                </p-button>
-            }
-        } @else {
-            <span class="user-profile__name">{{ profileName() }}</span>
-        }
-    </div>
-</p-dialog>
-
-<p-dialog
+<app-group-info-dialog
     [visible]="isGroupOpen()"
+    [title]="chat()?.title ?? ''"
+    [members]="groupMembers()"
+    [owner]="isGroupOwner()"
+    [loading]="isGroupLoading()"
+    [editing]="isGroupEditing()"
+    [titleDraft]="groupTitleDraft()"
+    [currentUserId]="currentUserId()"
+    [ownerId]="chat()?.ownerId ?? null"
+    [canRename]="canRenameGroup()"
     (visibleChange)="isGroupOpen.set($event)"
-    header="Информация о группе"
-    styleClass="group-info-dialog"
-    [draggable]="false"
-    [modal]="true"
-    [dismissableMask]="true"
->
-    <div class="group-info">
-        <p-avatar [label]="initials()" shape="circle" size="xlarge"></p-avatar>
+    (startRename)="startGroupRename()"
+    (cancelRename)="cancelGroupRename()"
+    (titleInput)="groupTitleDraft.set($event)"
+    (rename)="renameGroup()"
+    (addMembers)="openAddMembers()"
+    (deleteGroup)="openDeleteGroup()"
+    (removeMember)="removeMember($event)"
+    (directChat)="requestDirectChat($event)"
+></app-group-info-dialog>
 
-        @if (isGroupEditing()) {
-            <div class="group-info__edit">
-                <input
-                    pInputText
-                    fluid
-                    type="text"
-                    placeholder="Название группы"
-                    [value]="groupTitleDraft()"
-                    (input)="onGroupTitleInput($event)"
-                />
-
-                <div class="group-info__edit-actions">
-                    <p-button
-                        label="Отменить"
-                        [text]="true"
-                        (onClick)="cancelGroupRename()"
-                    ></p-button>
-                    <p-button
-                        label="Переименовать"
-                        [disabled]="!canRenameGroup()"
-                        (onClick)="renameGroup()"
-                    ></p-button>
-                </div>
-            </div>
-        } @else {
-            <div class="group-info__title-row">
-                <span class="group-info__name">{{ chat()?.title }}</span>
-
-                @if (isGroupOwner()) {
-                    <button
-                        type="button"
-                        class="group-info__edit-button"
-                        aria-label="Переименовать группу"
-                        (click)="startGroupRename()"
-                    >
-                        <i class="pi pi-pencil" aria-hidden="true"></i>
-                    </button>
-                }
-            </div>
-        }
-
-        @if (isGroupLoading()) {
-            <span class="group-info__count">Загрузка...</span>
-        } @else {
-            <span class="group-info__count">{{ groupMemberCountLabel() }}</span>
-        }
-
-        <div class="group-info__members">
-            @for (member of groupMembers(); track member.id) {
-                <div class="group-member">
-                    <p-avatar
-                        [label]="memberInitials(member)"
-                        shape="circle"
-                        size="large"
-                    ></p-avatar>
-                    <div class="group-member__info">
-                        <span class="group-member__name">{{ memberName(member) }}</span>
-                        <span class="group-member__tag">&#64;{{ member.username }}</span>
-                    </div>
-
-                    @if (isGroupOwner() && member.id !== currentUserId()) {
-                        <p-button
-                            type="button"
-                            severity="danger"
-                            size="small"
-                            [text]="true"
-                            [rounded]="true"
-                            ariaLabel="Удалить участника"
-                            (onClick)="removeMember(member)"
-                        >
-                            <i class="pi pi-times" aria-hidden="true"></i>
-                        </p-button>
-                    }
-
-                    @if (member.id !== currentUserId()) {
-                        <p-button
-                            type="button"
-                            severity="secondary"
-                            size="small"
-                            [rounded]="true"
-                            ariaLabel="Написать"
-                            (onClick)="requestDirectChat(member)"
-                        >
-                            <i class="pi pi-comments" aria-hidden="true"></i>
-                        </p-button>
-                    }
-                </div>
-            }
-        </div>
-
-        <p-button
-            label="Добавить участника"
-            [text]="true"
-            fluid
-            [disabled]="isGroupLoading()"
-            (onClick)="openAddMembers()"
-        ></p-button>
-
-        @if (isGroupOwner()) {
-            <p-button
-                label="Удалить группу"
-                severity="danger"
-                [text]="true"
-                fluid
-                (onClick)="openDeleteGroup()"
-            ></p-button>
-        }
-    </div>
-</p-dialog>
-
-<p-dialog
+<app-add-members-dialog
     [visible]="isAddMembersOpen()"
+    [loading]="isAddMembersLoading()"
+    [users]="addMemberCandidates()"
+    [error]="addMemberError()"
+    [selectedCount]="addSelectedIds().length"
     (visibleChange)="isAddMembersOpen.set($event)"
-    header="Добавить участника"
-    styleClass="group-add-dialog"
-    [draggable]="false"
-    [modal]="true"
-    [dismissableMask]="true"
->
-    <div class="add-members">
-        @if (isAddMembersLoading()) {
-            <p class="add-members__loading">Загрузка...</p>
-        } @else if (isAddMembersOpen()) {
-            <app-user-picker
-                [users]="addMemberCandidates()"
-                (selectionChange)="onAddMemberSelectionChange($event)"
-            ></app-user-picker>
-        }
+    (selectionChange)="onAddMemberSelectionChange($event)"
+    (add)="addMembers()"
+></app-add-members-dialog>
 
-        @if (addMemberError()) {
-            <p class="error">{{ addMemberError() }}</p>
-        }
-
-        <div class="dialog-actions">
-            <p-button
-                label="Отмена"
-                [text]="true"
-                (onClick)="isAddMembersOpen.set(false)"
-            ></p-button>
-            <p-button
-                label="Добавить"
-                [disabled]="addSelectedIds().length === 0 || isAddMembersLoading()"
-                (onClick)="addMembers()"
-            ></p-button>
-        </div>
-    </div>
-</p-dialog>
-
-<p-dialog
+<app-confirm-dialog
     [visible]="isDeleteGroupOpen()"
     (visibleChange)="isDeleteGroupOpen.set($event)"
     header="Удалить группу?"
-    styleClass="group-delete-dialog"
-    [draggable]="false"
-    [modal]="true"
-    [dismissableMask]="true"
->
-    <p class="delete-group-text">
-        Удалить группу «{{ chat()?.title }}»?
-        Действие нельзя отменить.
-    </p>
+    [text]="'Удалить группу «' + (chat()?.title ?? '') + '»? Действие нельзя отменить.'"
+    confirmLabel="Удалить"
+    dialogClass="group-delete-dialog"
+    (confirmed)="confirmDeleteGroup()"
+></app-confirm-dialog>
 
-    <div class="dialog-actions">
-        <p-button
-            label="Отмена"
-            [text]="true"
-            (onClick)="isDeleteGroupOpen.set(false)"
-        ></p-button>
-        <p-button
-            label="Удалить"
-            severity="danger"
-            (onClick)="confirmDeleteGroup()"
-        ></p-button>
-    </div>
-</p-dialog>
-
-<p-dialog
+<app-confirm-dialog
     [visible]="isDeleteMessageOpen()"
     (visibleChange)="isDeleteMessageOpen.set($event)"
     header="Удалить сообщение?"
-    styleClass="delete-message-dialog"
-    [draggable]="false"
-    [modal]="true"
-    [dismissableMask]="true"
->
-    <p class="delete-message-text">Удалить это сообщение?</p>
-
-    <div class="dialog-actions">
-        <p-button
-            label="Отмена"
-            [text]="true"
-            (onClick)="isDeleteMessageOpen.set(false)"
-        ></p-button>
-        <p-button
-            label="Удалить"
-            severity="danger"
-            (onClick)="confirmDeleteMessage()"
-        ></p-button>
-    </div>
-</p-dialog>
+    text="Удалить это сообщение?"
+    confirmLabel="Удалить"
+    dialogClass="delete-message-dialog"
+    (confirmed)="confirmDeleteMessage()"
+></app-confirm-dialog>
 
 @if (isImageOpen()) {
     <div

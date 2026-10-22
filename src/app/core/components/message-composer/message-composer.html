@@ -1,0 +1,86 @@
+@if (pendingAttachments().length > 0) {
+    <div class="composer-attachments">
+        @for (attachment of pendingAttachments(); track attachment.id) {
+            <div class="composer-attachment">
+                @if (attachment.isImage) {
+                    <img
+                        class="composer-attachment__preview"
+                        [src]="attachment.url"
+                        [alt]="attachment.name"
+                    />
+                } @else {
+                    <i class="pi pi-file" aria-hidden="true"></i>
+                }
+
+                <span class="composer-attachment__name">
+                    {{ attachment.name }}
+                </span>
+
+                <button
+                    type="button"
+                    class="composer-attachment__remove"
+                    aria-label="Убрать вложение"
+                    (click)="removeAttachment.emit(attachment)"
+                >
+                    <i class="pi pi-times" aria-hidden="true"></i>
+                </button>
+            </div>
+        }
+    </div>
+}
+
+@if (replyTo()) {
+    <div class="composer-reply">
+        <div class="composer-reply__content">
+            <span class="composer-reply__author">{{ replyAuthorName() }}</span>
+            <span class="composer-reply__text">{{ replyText() }}</span>
+        </div>
+        <button
+            type="button"
+            class="composer-reply__cancel"
+            aria-label="Отменить ответ"
+            (click)="cancelReply.emit()"
+        >
+            <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+    </div>
+}
+
+<div class="composer">
+    <button
+        type="button"
+        class="composer__attach"
+        aria-label="Прикрепить файл"
+        [disabled]="isSending() || isUploading()"
+        (click)="fileInput.click()"
+    >
+        <i class="pi pi-paperclip" aria-hidden="true"></i>
+    </button>
+
+    <input
+        #fileInput
+        type="file"
+        multiple
+        hidden
+        (change)="onFilesSelected($event)"
+    />
+
+    <textarea
+        pTextarea
+        fluid
+        autoResize
+        rows="1"
+        placeholder="Сообщение"
+        [value]="draft()"
+        (input)="onInput($event)"
+        (keydown.enter)="onEnter($event)"
+    ></textarea>
+
+    <p-button
+        label="Отправить"
+        size="small"
+        [style]="{ height: '100%' }"
+        [disabled]="(!draft().trim() && pendingAttachments().length === 0) || isSending() || isUploading()"
+        (onClick)="send.emit()"
+    ></p-button>
+</div>

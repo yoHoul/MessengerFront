@@ -58,6 +58,9 @@ app-search-chat {
     background: transparent;
     color: var(--text-main);
     cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .menu-button:hover {
@@ -67,4 +70,23 @@ app-search-chat {
 .menu-button svg {
     width: 20px;
     height: 20px;
+}
+
+@media (max-width: 768px) {
+    .chat-menu {
+        width: 100%;
+        border-right: 0;
+    }
+
+    .chat-window {
+        width: 100%;
+    }
+
+    .container:not(.container--chat-open) .chat-window {
+        display: none;
+    }
+
+    .container.container--chat-open .chat-menu {
+        display: none;
+    }
 }

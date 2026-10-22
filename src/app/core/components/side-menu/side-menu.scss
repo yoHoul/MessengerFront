@@ -53,6 +53,9 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .profile-form {
