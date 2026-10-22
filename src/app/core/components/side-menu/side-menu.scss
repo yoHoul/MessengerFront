@@ -58,12 +58,6 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-.profile-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
 .field {
     display: flex;
     flex-direction: column;
@@ -73,24 +67,6 @@
 .field > span {
     font-size: 13px;
     opacity: 0.7;
-}
-
-.section-title {
-    margin: 4px 0 0;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.error {
-    margin: 0;
-    color: #e5484d;
-    font-size: 13px;
-}
-
-.success {
-    margin: 0;
-    color: #2e7d32;
-    font-size: 13px;
 }
 
 .dialog-actions {

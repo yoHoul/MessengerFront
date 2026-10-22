@@ -142,6 +142,7 @@
     [visible]="isGroupOpen()"
     [title]="chat()?.title ?? ''"
     [members]="groupMembers()"
+    [error]="groupMembersError()"
     [owner]="isGroupOwner()"
     [loading]="isGroupLoading()"
     [editing]="isGroupEditing()"

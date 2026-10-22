@@ -167,13 +167,30 @@ export class MessagesStoreService {
 
     return this.messagesApi.getMessageContext(chatId, messageId).pipe(
       map((page) => {
+        const existing = this.states().get(chatId);
+        const merged = new Map<string, Message>();
+
+        for (const message of existing?.messages ?? []) {
+          merged.set(message.id, message);
+        }
+
+        for (const message of page.messages) {
+          merged.set(message.id, message);
+        }
+
+        const messages = [...merged.values()].sort((a, b) =>
+          a.createdAt.localeCompare(b.createdAt),
+        );
         const state: ChatMessagesState = {
-          ...page,
-          loadingOlder: false,
+          messages,
+          hasMoreBefore:
+            page.hasMoreBefore || (existing?.hasMoreBefore ?? false),
+          nextBefore: messages[0]?.id ?? null,
+          loadingOlder: existing?.loadingOlder ?? false,
         };
 
         this.commit(chatId, state);
-        return state.messages.find((message) => message.id === messageId) ?? null;
+        return messages.find((message) => message.id === messageId) ?? null;
       }),
     );
   }

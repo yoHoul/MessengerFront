@@ -6,6 +6,7 @@ import { Message, MessageReply } from '../type/message';
 import { MessagePage } from '../type/message-page';
 import { SendMessageInput } from '../type/send-message-input';
 import { CurrentUserService } from './current-user.service';
+import { AttachmentsApiService } from './attachments-api.service';
 import { MockIdService } from './mock-id.service';
 import { UserProfileApiService } from './user-profile-api.service';
 
@@ -16,6 +17,7 @@ const CONTEXT_RADIUS = 10;
 export class MessagesApiService {
   private readonly http = inject(HttpClient);
   private readonly currentUser = inject(CurrentUserService);
+  private readonly attachmentsApi = inject(AttachmentsApiService);
   private readonly ids = inject(MockIdService);
   private readonly userProfileApi = inject(UserProfileApiService);
 
@@ -168,6 +170,12 @@ export class MessagesApiService {
           return false;
         }
 
+        const deleted = history.find((message) => message.id === messageId);
+
+        if (deleted?.attachments?.length) {
+          this.attachmentsApi.release(deleted.attachments);
+        }
+
         this.historyByChat.set(chatId, nextHistory);
         return true;
       }),
@@ -213,6 +221,11 @@ export class MessagesApiService {
                 };
 
                 targetHistory.push(message);
+
+                if (message.attachments?.length) {
+                  this.attachmentsApi.retain(message.attachments);
+                }
+
                 return message;
               }),
             ),

@@ -16,6 +16,7 @@ export class GroupInfoDialog {
   readonly visible = input(false);
   readonly title = input('');
   readonly members = input<User[]>([]);
+  readonly error = input('');
   readonly owner = input(false);
   readonly loading = input(false);
   readonly editing = input(false);

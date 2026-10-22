@@ -1,0 +1,145 @@
+<p-dialog
+    [visible]="visible()"
+    (visibleChange)="visibleChange.emit($event)"
+    header="Настройки аккаунта"
+    styleClass="account-dialog"
+    [draggable]="false"
+    [modal]="true"
+    [dismissableMask]="true"
+>
+    <div class="profile-form">
+        <label class="field">
+            <span>Имя</span>
+            <input
+                pInputText
+                fluid
+                type="text"
+                [value]="profileName()"
+                (input)="onProfileNameInput($event)"
+            />
+        </label>
+
+        <label class="field">
+            <span>Тэг аккаунта</span>
+            <input
+                pInputText
+                fluid
+                type="text"
+                autocomplete="username"
+                [value]="profileUsername()"
+                (input)="onProfileUsernameInput($event)"
+            />
+        </label>
+
+        @if (profileError()) {
+            <p class="error">{{ profileError() }}</p>
+        }
+
+        @if (profileSuccess()) {
+            <p class="success">{{ profileSuccess() }}</p>
+        }
+
+        <div class="dialog-actions">
+            <p-button
+                label="Сохранить"
+                [disabled]="!canSaveProfile() || isProfileSaving()"
+                (onClick)="saveProfile()"
+            ></p-button>
+        </div>
+
+        <div class="divider"></div>
+
+        <h3 class="section-title">Смена пароля</h3>
+
+        <label class="field">
+            <span>Старый пароль</span>
+            <div class="password-field">
+                <input
+                    pInputText
+                    fluid
+                    [type]="showOldPassword() ? 'text' : 'password'"
+                    autocomplete="current-password"
+                    [value]="oldPassword()"
+                    (input)="onOldPasswordInput($event)"
+                />
+                <button
+                    type="button"
+                    class="password-field__toggle"
+                    [attr.aria-label]="showOldPassword() ? 'Скрыть пароль' : 'Показать пароль'"
+                    (click)="showOldPassword.set(!showOldPassword())"
+                >
+                    <i
+                        [class]="showOldPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+            </div>
+        </label>
+
+        <label class="field">
+            <span>Новый пароль</span>
+            <div class="password-field">
+                <input
+                    pInputText
+                    fluid
+                    [type]="showNewPassword() ? 'text' : 'password'"
+                    autocomplete="new-password"
+                    [value]="newPassword()"
+                    (input)="onNewPasswordInput($event)"
+                />
+                <button
+                    type="button"
+                    class="password-field__toggle"
+                    [attr.aria-label]="showNewPassword() ? 'Скрыть пароль' : 'Показать пароль'"
+                    (click)="showNewPassword.set(!showNewPassword())"
+                >
+                    <i
+                        [class]="showNewPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+            </div>
+        </label>
+
+        <label class="field">
+            <span>Подтвердите новый пароль</span>
+            <div class="password-field">
+                <input
+                    pInputText
+                    fluid
+                    [type]="showConfirmPassword() ? 'text' : 'password'"
+                    autocomplete="new-password"
+                    [value]="confirmPassword()"
+                    (input)="onConfirmPasswordInput($event)"
+                />
+                <button
+                    type="button"
+                    class="password-field__toggle"
+                    [attr.aria-label]="showConfirmPassword() ? 'Скрыть пароль' : 'Показать пароль'"
+                    (click)="showConfirmPassword.set(!showConfirmPassword())"
+                >
+                    <i
+                        [class]="showConfirmPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+            </div>
+        </label>
+
+        @if (passwordError()) {
+            <p class="error">{{ passwordError() }}</p>
+        }
+
+        @if (passwordSuccess()) {
+            <p class="success">{{ passwordSuccess() }}</p>
+        }
+
+        <div class="dialog-actions">
+            <p-button
+                label="Сменить пароль"
+                [disabled]="!canChangePassword() || isPasswordSaving()"
+                (onClick)="changePassword()"
+            ></p-button>
+        </div>
+    </div>
+</p-dialog>

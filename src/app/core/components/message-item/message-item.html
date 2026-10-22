@@ -115,19 +115,7 @@
                 }
 
                 @if (message().text) {
-                    <p class="text">
-                        @for (part of messageTextParts(message().text); track $index) {
-                            @if (part.href) {
-                                <a
-                                    [href]="part.href"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >{{ part.text }}</a>
-                            } @else {
-                                {{ part.text }}
-                            }
-                        }
-                    </p>
+                    <p class="text">@for (part of messageTextParts(message().text); track $index) {@if (part.href) {<a [href]="part.href" target="_blank" rel="noopener noreferrer">{{part.text}}</a>} @else {<span>{{part.text}}</span>}}</p>
                 }
 
                 <span class="time">

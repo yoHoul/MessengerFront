@@ -1,20 +1,18 @@
 import { DatePipe } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Component,
   computed,
   inject,
   input,
   output,
-  signal,
 } from '@angular/core';
 import { AvatarModule } from '@openng/optimus-ui/avatar';
 import { ButtonModule } from '@openng/optimus-ui/button';
 import { Textarea } from '@openng/optimus-ui/textarea';
 
-import { UserProfileApiService } from '../../services/user-profile-api.service';
+import { DirectoryStoreService } from '../../services/directory-store.service';
 import { Message, MessageAttachment } from '../../type/message';
-import { User } from '../../type/user';
+import { isMobileViewport } from '../../utils/is-mobile';
 
 interface MessageTextPart {
   text: string;
@@ -28,7 +26,7 @@ interface MessageTextPart {
   templateUrl: './message-item.html',
 })
 export class MessageItem {
-  private readonly userProfileApi = inject(UserProfileApiService);
+  private readonly directory = inject(DirectoryStoreService);
 
   readonly message = input.required<Message>();
   readonly isGroup = input(false);
@@ -51,7 +49,7 @@ export class MessageItem {
   readonly openImage = output<MessageAttachment>();
   readonly jumpReply = output<Message>();
 
-  private readonly usersById = signal<Map<string, User>>(new Map());
+  private readonly usersById = this.directory.usersById;
 
   protected readonly isMine = computed(
     () => this.message().authorId === this.currentUserId(),
@@ -76,17 +74,6 @@ export class MessageItem {
     const message = this.message();
     return Boolean(message.replyTo || message.replyToId);
   });
-
-  constructor() {
-    this.userProfileApi
-      .getUsers()
-      .pipe(takeUntilDestroyed())
-      .subscribe((users) =>
-        this.usersById.set(
-          new Map(users.map((user) => [user.id, user] as const)),
-        ),
-      );
-  }
 
   protected replyAuthorName(): string {
     const message = this.message();
@@ -173,7 +160,7 @@ export class MessageItem {
   }
 
   protected onEditEnter(event: Event): void {
-    if ((event as KeyboardEvent).shiftKey) {
+    if (isMobileViewport() || (event as KeyboardEvent).shiftKey) {
       return;
     }
 

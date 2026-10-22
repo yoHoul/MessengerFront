@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, forkJoin, map, shareReplay } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, forkJoin, map, shareReplay, take } from 'rxjs';
 
 import { User } from '../type/user';
 
@@ -36,6 +36,10 @@ export class UserProfileApiService {
         return [...merged.values()];
       }),
     );
+  }
+
+  getUsersOnce(): Observable<User[]> {
+    return this.getUsers().pipe(take(1));
   }
 
   upsertUser(user: User): void {

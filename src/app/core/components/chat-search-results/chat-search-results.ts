@@ -42,6 +42,7 @@ export class ChatSearchResults {
 
   protected readonly users = signal<User[]>([]);
   protected readonly isUsersLoading = signal(false);
+  protected readonly hasError = signal(false);
 
   private apiRequestId = 0;
 
@@ -96,6 +97,7 @@ export class ChatSearchResults {
           const searchTerm = (tagSearch ? query.slice(1) : query).trim();
 
           this.users.set([]);
+          this.hasError.set(false);
 
           if (!searchTerm || (!tagSearch && searchTerm.length < 2)) {
             this.isUsersLoading.set(false);
@@ -106,7 +108,10 @@ export class ChatSearchResults {
           this.isUsersLoading.set(true);
 
           return this.searchUsersApi.searchUsers(searchTerm, tagSearch).pipe(
-            catchError(() => of<User[]>([])),
+            catchError(() => {
+              this.hasError.set(true);
+              return of<User[]>([]);
+            }),
             finalize(() => {
               if (requestId === this.apiRequestId) {
                 this.isUsersLoading.set(false);
