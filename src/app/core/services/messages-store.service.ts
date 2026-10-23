@@ -31,8 +31,16 @@ export class MessagesStoreService {
 
     return this.messagesApi.getMessages(chatId, { limit: PAGE_SIZE }).pipe(
       map((page) => {
+        const existing = this.states().get(chatId);
+        const messages = existing
+          ? this.mergeMessages(page.messages, existing.messages)
+          : page.messages;
         const state: ChatMessagesState = {
           ...page,
+          messages,
+          nextBefore: messages[0]?.id ?? page.nextBefore,
+          nextAfter:
+            messages[messages.length - 1]?.id ?? page.nextAfter,
           loadingOlder: false,
           loadingNewer: false,
         };
@@ -254,6 +262,25 @@ export class MessagesStoreService {
       next.set(chatId, state);
       return next;
     });
+  }
+
+  private mergeMessages(
+    first: Message[],
+    second: Message[],
+  ): Message[] {
+    const merged = new Map<string, Message>();
+
+    for (const message of first) {
+      merged.set(message.id, message);
+    }
+
+    for (const message of second) {
+      merged.set(message.id, message);
+    }
+
+    return [...merged.values()].sort((a, b) =>
+      a.createdAt.localeCompare(b.createdAt),
+    );
   }
 
   private snapshot(state: ChatMessagesState): ChatMessagesState {
