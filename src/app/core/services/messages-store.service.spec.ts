@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { vi } from 'vitest';
 
 import { Message } from '../type/message';
@@ -102,5 +102,29 @@ describe('MessagesStoreService', () => {
         '6',
       ]);
     });
+  });
+
+  it('does not overwrite a message sent while the initial page is loading', () => {
+    const api = TestBed.inject(MessagesApi) as unknown as {
+      getMessages: ReturnType<typeof vi.fn>;
+    };
+    const initialPage$ = new Subject<MessagePage>();
+
+    api.getMessages.mockReturnValue(initialPage$.asObservable());
+
+    service.getInitialPage('1').subscribe();
+    service.setMessages('1', [message('99')]);
+    initialPage$.next({
+      messages: [],
+      hasMoreBefore: false,
+      nextBefore: null,
+      hasMoreAfter: false,
+      nextAfter: null,
+    });
+    initialPage$.complete();
+
+    expect(
+      service.getLoadedMessages('1').some((item) => item.id === '99'),
+    ).toBe(true);
   });
 });
