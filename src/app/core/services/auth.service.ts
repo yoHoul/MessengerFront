@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, firstValueFrom, map, tap, throwError } from 'rxjs';
 
-import { AuthApiService } from './auth-api.service';
+import { AuthApi } from '../api/auth-api';
 import { AuthCredentials, AuthSession, ProfileUpdate } from '../type/auth';
 import { User } from '../type/user';
 
@@ -9,7 +9,7 @@ const SESSION_STORAGE_KEY = 'messenger.session';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly authApi = inject(AuthApiService);
+  private readonly authApi = inject(AuthApi);
   private readonly currentUserState = signal<User | null>(null);
 
   private token: string | null = null;
@@ -77,6 +77,10 @@ export class AuthService {
     if (token) {
       this.authApi.logout(token).subscribe({ error: () => undefined });
     }
+  }
+
+  accessToken(): string | null {
+    return this.getToken();
   }
 
   private getToken(): string | null {

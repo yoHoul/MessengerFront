@@ -4,13 +4,14 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 
 import { ChatListItem } from '../type/chat-list-item';
 import { User } from '../type/user';
+import { ChatsApi } from '../api/chats-api';
 import { CurrentUserService } from './current-user.service';
 import { MockIdService } from './mock-id.service';
 
 const CHAT_LIST_MOCK_VERSION = '2';
 
 @Injectable({ providedIn: 'root' })
-export class ChatsApiService {
+export class ChatsApiService implements ChatsApi {
   private readonly http = inject(HttpClient);
   private readonly currentUser = inject(CurrentUserService);
   private readonly ids = inject(MockIdService);
@@ -37,7 +38,11 @@ export class ChatsApiService {
     return of(this.createChat(user.displayName, null, user.id));
   }
 
-  createGroupChat(title: string, ownerId: string): Observable<ChatListItem> {
+  createGroupChat(
+    title: string,
+    ownerId: string,
+    _memberIds: string[],
+  ): Observable<ChatListItem> {
     return of(this.createChat(title, ownerId, null));
   }
 

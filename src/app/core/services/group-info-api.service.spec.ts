@@ -7,6 +7,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { GroupInfoApiService } from './group-info-api.service';
 import { UserProfileApiService } from './user-profile-api.service';
+import { UserDirectoryApi } from '../api/user-directory-api';
 import { User } from '../type/user';
 
 const user: User = {
@@ -36,6 +37,7 @@ describe('GroupInfoApiService', () => {
       providers: [
         GroupInfoApiService,
         UserProfileApiService,
+        { provide: UserDirectoryApi, useExisting: UserProfileApiService },
         provideHttpClient(),
         provideHttpClientTesting(),
       ],

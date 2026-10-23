@@ -3,13 +3,13 @@ import { Observable, catchError, finalize, map, of, tap, throwError } from 'rxjs
 
 import { Message } from '../type/message';
 import { ChatMessagesState } from '../type/message-page';
-import { MessagesApiService } from './messages-api.service';
+import { MessagesApi } from '../api/messages-api';
 
 const PAGE_SIZE = 20;
 
 @Injectable({ providedIn: 'root' })
 export class MessagesStoreService {
-  private readonly messagesApi = inject(MessagesApiService);
+  private readonly messagesApi = inject(MessagesApi);
 
   private readonly states = signal<ReadonlyMap<string, ChatMessagesState>>(
     new Map(),

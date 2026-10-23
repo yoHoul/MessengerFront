@@ -16,13 +16,13 @@ import { AvatarModule } from '@openng/optimus-ui/avatar';
 import { catchError, of, switchMap } from 'rxjs';
 
 import { CurrentUserService } from '../../services/current-user.service';
-import { AttachmentsApiService } from '../../services/attachments-api.service';
+import { AttachmentsApi } from '../../api/attachments-api';
 import { DirectoryStoreService } from '../../services/directory-store.service';
 import { DraftsService } from '../../services/drafts.service';
-import { GroupInfoApiService } from '../../services/group-info-api.service';
-import { MessagesApiService } from '../../services/messages-api.service';
+import { GroupInfoApi } from '../../api/group-info-api';
+import { MessagesApi } from '../../api/messages-api';
 import { MessagesStoreService } from '../../services/messages-store.service';
-import { UserProfileApiService } from '../../services/user-profile-api.service';
+import { UserDirectoryApi } from '../../api/user-directory-api';
 import { ChatListItem } from '../../type/chat-list-item';
 import { ChatPreview } from '../../type/chat-preview';
 import { GroupRenameRequest } from '../../type/group-rename-request';
@@ -57,12 +57,12 @@ type ScrollMode = 'bottom' | 'preserve' | 'none';
 export class ChatWindow {
   private readonly currentUser = inject(CurrentUserService);
   private readonly document = inject(DOCUMENT);
-  private readonly attachmentsApi = inject(AttachmentsApiService);
+  private readonly attachmentsApi = inject(AttachmentsApi);
   private readonly directory = inject(DirectoryStoreService);
   private readonly drafts = inject(DraftsService);
-  private readonly userProfileApi = inject(UserProfileApiService);
-  private readonly groupInfoApi = inject(GroupInfoApiService);
-  private readonly messagesApi = inject(MessagesApiService);
+  private readonly userProfileApi = inject(UserDirectoryApi);
+  private readonly groupInfoApi = inject(GroupInfoApi);
+  private readonly messagesApi = inject(MessagesApi);
   private readonly messagesStore = inject(MessagesStoreService);
   private readonly destroyRef = inject(DestroyRef);
 

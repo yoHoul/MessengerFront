@@ -4,12 +4,13 @@ import { Observable, forkJoin, map, of, shareReplay, tap } from 'rxjs';
 
 import { ChatParticipant, ChatRole } from '../type/chat-participant';
 import { User } from '../type/user';
-import { UserProfileApiService } from './user-profile-api.service';
+import { GroupInfoApi } from '../api/group-info-api';
+import { UserDirectoryApi } from '../api/user-directory-api';
 
 @Injectable({ providedIn: 'root' })
-export class GroupInfoApiService {
+export class GroupInfoApiService implements GroupInfoApi {
   private readonly http = inject(HttpClient);
-  private readonly userProfileApi = inject(UserProfileApiService);
+  private readonly userProfileApi = inject(UserDirectoryApi);
 
   private readonly participantsState = signal<ChatParticipant[] | null>(null);
 
